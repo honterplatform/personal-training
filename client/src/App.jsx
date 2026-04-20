@@ -108,6 +108,20 @@ export default function App() {
     }
   }
 
+  async function handleSummaryRegenerate() {
+    const ws = weekStartISO(selectedDate);
+    setSummaryLoading(true);
+    setSummary(null);
+    try {
+      const s = await api.generateSummary(ws);
+      setSummary(s.text);
+    } catch {
+      setSummary("Summary unavailable, try again in a moment.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
   if (!booted) {
     return (
       <div className="app-shell" style={{ padding: 40, color: "rgba(26,23,22,0.4)" }}>
@@ -137,6 +151,7 @@ export default function App() {
               summaryOpen={summaryOpen}
               summaryLoading={summaryLoading}
               onSummaryToggle={handleSummaryToggle}
+              onSummaryRegenerate={handleSummaryRegenerate}
             />
           </div>
 

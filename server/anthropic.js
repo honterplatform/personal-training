@@ -63,13 +63,37 @@ Respond with exactly: {"calories": <integer>}`;
   }
 }
 
+function computeWeeklyTotals(entries) {
+  const t = { walks: 0, walkKm: 0, squash: 0, tkd: 0, strength: 0, proteinDays: 0, calories: 0 };
+  for (const e of entries) {
+    if (e.caloriesBurned) t.calories += Number(e.caloriesBurned) || 0;
+    if (!e.done) continue;
+    if (e.activity === "walk") {
+      t.walks += 1;
+      t.walkKm += Number(e.distanceKm) || 0;
+    }
+    if (e.activity === "squash") t.squash += 1;
+    if (e.activity === "taekwondo") t.tkd += 1;
+    if (e.activity === "strength") t.strength += 1;
+    if (e.activity === "protein") t.proteinDays += 1;
+  }
+  t.totalDone = t.walks + t.squash + t.tkd + t.strength + t.proteinDays;
+  return t;
+}
+
 export async function weeklySummary({ entries, settings, weekStart }) {
+  const totals = computeWeeklyTotals(entries);
+
+  if (totals.totalDone === 0) {
+    return `Week of ${weekStart} is still empty — no completed sessions yet. Log a walk, a training, or your protein and check back once there's real data to review.`;
+  }
+
   const client = getClient();
   if (!client) return "Summary unavailable, try again in a moment.";
 
   const rows = entries
     .map((e) => {
-      const parts = [e.date, e.activity, e.done ? "✓" : "–"];
+      const parts = [e.date, e.activity, e.done ? "DONE" : "not done"];
       if (e.distanceKm != null) parts.push(`${e.distanceKm}km`);
       if (e.durationMin != null) parts.push(`${e.durationMin}min`);
       if (e.rpe != null) parts.push(`RPE${e.rpe}`);
@@ -80,18 +104,40 @@ export async function weeklySummary({ entries, settings, weekStart }) {
     })
     .join("\n");
 
-  const prompt = `You are a training coach reviewing one week (starting ${weekStart}) for an athlete. Speak directly to them, no markdown headers, no lists, max ~180 words. Cover: what hit targets, what didn't, one pattern observation, one thing to watch next week. Plain text only.
+  const prompt = `You are a direct, grounded training coach. Review ONE week for this athlete and write a short coach note.
 
-Weekly targets: 7 walks totaling 42km, 3 squash, 3 taekwondo, 1 strength, ${settings.proteinGoalG}g protein daily. Body weight: ${settings.bodyWeightKg}kg.
+CRITICAL RULES:
+- ONLY reference sessions that appear in the DATA below. Do NOT invent sessions, durations, distances, or patterns.
+- Use the AUTHORITATIVE TOTALS as ground truth — if a count is 0, say "missed" or "none logged", never fabricate results.
+- If data is sparse, keep the note short. Don't pad with imagined observations.
+- Plain text only, no markdown, no bullet lists, max 150 words.
 
-Entries:
-${rows || "(no entries this week)"}`;
+ATHLETE TARGETS (weekly):
+- Walks: 7 sessions totaling 42 km
+- Squash: 3 sessions
+- Taekwondo: 3 sessions
+- Strength: 1 session
+- Protein: ${settings.proteinGoalG}g per day (7 days)
+Body weight: ${settings.bodyWeightKg}kg.
+
+AUTHORITATIVE TOTALS FOR WEEK OF ${weekStart} (ground truth — do not contradict):
+- Walks done: ${totals.walks}/7  (${totals.walkKm.toFixed(1)}/42 km)
+- Squash done: ${totals.squash}/3
+- Taekwondo done: ${totals.tkd}/3
+- Strength done: ${totals.strength}/1
+- Protein days hit: ${totals.proteinDays}/7
+- Calories burned (estimated): ${totals.calories}
+
+DATA — individual entries (chronological):
+${rows}
+
+Now write the coach note. Cover: what hit the target, what was missed, and one concrete thing to focus on next week — grounded entirely in the totals above.`;
 
   try {
     const resp = await client.messages.create({
       model: MODEL,
       max_tokens: 500,
-      temperature: 0.7,
+      temperature: 0.5,
       messages: [{ role: "user", content: prompt }],
     });
     return resp.content
