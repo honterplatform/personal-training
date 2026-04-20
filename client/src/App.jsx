@@ -135,6 +135,7 @@ export default function App() {
   }
 
   const dateEntries = weekEntries.filter((e) => e.date === selectedDate);
+  const dayKcal = dateEntries.reduce((sum, e) => sum + (Number(e.caloriesBurned) || 0), 0);
 
   return (
     <div className="app-shell">
@@ -156,7 +157,7 @@ export default function App() {
           </div>
 
           <div className="day-col">
-            <DatePicker value={selectedDate} onChange={setSelectedDate} />
+            <DatePicker value={selectedDate} onChange={setSelectedDate} dayKcal={dayKcal} />
             <Checklist
               date={selectedDate}
               entries={dateEntries}

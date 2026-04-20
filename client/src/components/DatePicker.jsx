@@ -1,6 +1,9 @@
 import { todayISO } from "../lib/dates.js";
+import { FlameIcon } from "./Icons.jsx";
 
-export default function DatePicker({ value, onChange }) {
+const ACCENT = "#ff5a3c";
+
+export default function DatePicker({ value, onChange, dayKcal = 0 }) {
   const today = todayISO();
   const d = new Date(value + "T12:00:00");
   const weekday = d.toLocaleString("en", { weekday: "long", timeZone: "America/Bogota" });
@@ -63,6 +66,27 @@ export default function DatePicker({ value, onChange }) {
           </button>
         )}
       </div>
+      {dayKcal > 0 && (
+        <div
+          style={{
+            marginTop: 10,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 12px",
+            borderRadius: 999,
+            background: `${ACCENT}14`,
+            color: ACCENT,
+            fontFamily: "var(--mono)",
+            fontSize: 12,
+            fontWeight: 500,
+            letterSpacing: 0.2,
+          }}
+        >
+          <FlameIcon size={12} stroke={2} />
+          {dayKcal.toLocaleString()} kcal burned
+        </div>
+      )}
     </div>
   );
 }
