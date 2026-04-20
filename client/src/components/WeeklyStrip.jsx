@@ -128,17 +128,29 @@ export default function WeeklyStrip({ selectedDate, weekEntries, onSelectDate, s
               >
                 {parseInt(iso.slice(8, 10), 10)}
                 {!isSel && completion > 0 && (
-                  <svg viewBox="0 0 36 36" style={{ position: "absolute", inset: -1, pointerEvents: "none" }}>
+                  <svg
+                    viewBox="0 0 100 100"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      pointerEvents: "none",
+                      overflow: "visible",
+                    }}
+                  >
                     <circle
-                      cx="18"
-                      cy="18"
-                      r="16"
+                      cx="50"
+                      cy="50"
+                      r="49"
                       fill="none"
                       stroke={ACCENT}
                       strokeWidth="2"
-                      strokeDasharray={`${completion * 100.5} 101`}
+                      vectorEffect="non-scaling-stroke"
+                      pathLength="100"
+                      strokeDasharray={`${completion * 100} 100`}
                       strokeLinecap="round"
-                      transform="rotate(-90 18 18)"
+                      transform="rotate(-90 50 50)"
                     />
                   </svg>
                 )}
