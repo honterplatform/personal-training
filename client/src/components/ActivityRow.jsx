@@ -304,7 +304,7 @@ function RPERow({ value, onChange }) {
           textTransform: "uppercase",
           letterSpacing: 0.5,
           fontFamily: "var(--mono)",
-          marginBottom: 8,
+          marginBottom: 4,
           display: "flex",
           justifyContent: "space-between",
         }}
@@ -313,6 +313,17 @@ function RPERow({ value, onChange }) {
         <span style={{ color: value ? ACCENT : "rgba(26,23,22,0.35)", fontWeight: 600 }}>
           {value ? value + "/10" : "tap to rate"}
         </span>
+      </div>
+      <div
+        style={{
+          fontSize: 11,
+          color: "rgba(26,23,22,0.45)",
+          fontFamily: "var(--sans)",
+          marginBottom: 8,
+          lineHeight: 1.35,
+        }}
+      >
+        Rate of perceived exertion — how hard it felt. 1 = barely moving, 5 = conversational, 7 = breathing hard, 10 = all-out.
       </div>
       <div className="rpe-grid">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
