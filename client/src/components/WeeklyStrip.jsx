@@ -307,11 +307,11 @@ function computeTotals(days, entries) {
 
   for (const d of days) {
     let done = 0;
-    let total = 0;
+    let tracked = 0;
     for (const a of ACTS) {
       const e = byKey[`${d}|${a}`];
-      total += 1;
-      if (e?.done) {
+      if (!e) continue;
+      if (e.done) {
         done += 1;
         if (a === "walk") {
           t.walkDays++;
@@ -322,9 +322,21 @@ function computeTotals(days, entries) {
         if (a === "strength") t.strengthDays++;
         if (a === "protein") t.proteinDays++;
       }
-      if (e?.caloriesBurned) t.calories += Number(e.caloriesBurned) || 0;
+      if (hasSignal(e)) tracked += 1;
+      if (e.caloriesBurned) t.calories += Number(e.caloriesBurned) || 0;
     }
-    t.byDay[d] = total ? done / total : 0;
+    t.byDay[d] = tracked ? done / tracked : 0;
   }
   return t;
+}
+
+function hasSignal(e) {
+  return (
+    e.done ||
+    e.distanceKm != null ||
+    e.durationMin != null ||
+    e.rpe != null ||
+    e.proteinG != null ||
+    (typeof e.notes === "string" && e.notes.length > 0)
+  );
 }

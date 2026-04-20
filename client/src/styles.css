@@ -146,3 +146,32 @@ input[type="number"] { -moz-appearance: textfield; }
   opacity: 0;
   cursor: pointer;
 }
+
+/* ---------- Activity row internals ---------- */
+.fields-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.fields-row > * {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.rpe-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
+@media (max-width: 440px) {
+  .rpe-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+.rpe-btn {
+  height: 36px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(26,23,22,0.04);
+  transition: all 120ms;
+}

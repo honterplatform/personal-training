@@ -184,7 +184,7 @@ function Body({ activity, entry, onSave, onDelete }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 14 }}>
-      <div style={{ display: "flex", gap: 10 }}>
+      <div className="fields-row">
         {activity === "walk" && (
           <NumField
             label="distance"
@@ -238,7 +238,7 @@ function Body({ activity, entry, onSave, onDelete }) {
 
 function NumField({ label, unit, value, onChange, onCommit, placeholder }) {
   return (
-    <label style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+    <label style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
       <span
         style={{
           fontSize: 10.5,
@@ -309,22 +309,17 @@ function RPERow({ value, onChange }) {
           {value ? value + "/10" : "tap to rate"}
         </span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 4 }}>
+      <div className="rpe-grid">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
           const active = value >= n;
           return (
             <button
               key={n}
+              className="rpe-btn"
               onClick={() => onChange(value === n ? null : n)}
               style={{
-                height: 32,
-                borderRadius: 8,
                 background: active ? ACCENT : "#f4efe5",
                 color: active ? "#fff" : "rgba(26,23,22,0.55)",
-                fontSize: 12,
-                fontWeight: 600,
-                border: "1px solid rgba(26,23,22,0.04)",
-                transition: "all 120ms",
               }}
             >
               {n}
