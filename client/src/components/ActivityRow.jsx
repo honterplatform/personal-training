@@ -23,7 +23,10 @@ const META = {
 export default function ActivityRow({ activity, entry, open, onToggleOpen, onSave, onDelete }) {
   const meta = META[activity];
   const done = !!entry?.done;
-  const subtitle = describe(activity, entry) || meta.target;
+  const needsDuration = done && !entry?.durationMin;
+  const subtitle = needsDuration
+    ? "add duration for kcal estimate"
+    : describe(activity, entry) || meta.target;
 
   return (
     <div
@@ -50,7 +53,9 @@ export default function ActivityRow({ activity, entry, open, onToggleOpen, onSav
         <span
           onClick={(e) => {
             e.stopPropagation();
-            onSave({ done: !done });
+            const next = !done;
+            onSave({ done: next });
+            if (next && !entry?.durationMin && !open) onToggleOpen();
           }}
           style={{
             width: 26,

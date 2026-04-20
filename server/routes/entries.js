@@ -19,25 +19,16 @@ router.put("/:date/:activity", async (req, res) => {
   if (!ALLOWED.includes(activity)) return res.status(400).json({ error: "bad activity" });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: "bad date" });
 
-  const {
-    done = false,
-    distanceKm = null,
-    durationMin = null,
-    rpe = null,
-    proteinG = null,
-    notes = "",
-  } = req.body || {};
+  const body = req.body || {};
+  const update = { date, activity };
 
-  const update = {
-    date,
-    activity,
-    done: !!done,
-    distanceKm: distanceKm === "" ? null : distanceKm,
-    durationMin: durationMin === "" ? null : durationMin,
-    rpe: rpe === "" ? null : rpe,
-    proteinG: proteinG === "" ? null : proteinG,
-    notes: notes || "",
-  };
+  const normNum = (v) => (v === "" || v == null ? null : Number(v));
+  if ("done" in body) update.done = !!body.done;
+  if ("distanceKm" in body) update.distanceKm = normNum(body.distanceKm);
+  if ("durationMin" in body) update.durationMin = normNum(body.durationMin);
+  if ("rpe" in body) update.rpe = normNum(body.rpe);
+  if ("proteinG" in body) update.proteinG = normNum(body.proteinG);
+  if ("notes" in body) update.notes = body.notes || "";
 
   let entry = await Entry.findOneAndUpdate(
     { date, activity },
