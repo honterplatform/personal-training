@@ -2,9 +2,14 @@ import { useState } from "react";
 import { api } from "../api.js";
 import { XIcon } from "./Icons.jsx";
 
+const ACCENT = "#ff5a3c";
+
 export default function Settings({ settings, onClose, onSaved }) {
   const [bw, setBw] = useState(settings?.bodyWeightKg ?? 75);
   const [pg, setPg] = useState(settings?.proteinGoalG ?? 150);
+  const [sex, setSex] = useState(settings?.sex ?? "");
+  const [age, setAge] = useState(settings?.age ?? "");
+  const [fitness, setFitness] = useState(settings?.fitnessLevel ?? "");
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -13,6 +18,9 @@ export default function Settings({ settings, onClose, onSaved }) {
       const next = await api.saveSettings({
         bodyWeightKg: Number(bw) || 0,
         proteinGoalG: Number(pg) || 0,
+        sex: sex || null,
+        age: age === "" ? null : Number(age),
+        fitnessLevel: fitness || null,
       });
       onSaved(next);
       onClose();
@@ -40,6 +48,8 @@ export default function Settings({ settings, onClose, onSaved }) {
         style={{
           width: "100%",
           maxWidth: 440,
+          maxHeight: "92vh",
+          overflowY: "auto",
           background: "#f4efe5",
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
@@ -77,8 +87,31 @@ export default function Settings({ settings, onClose, onSaved }) {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Field label="body weight" unit="kg" value={bw} onChange={setBw} />
-          <Field label="daily protein goal" unit="g" value={pg} onChange={setPg} />
+          <NumInput label="body weight" unit="kg" value={bw} onChange={setBw} />
+          <NumInput label="daily protein goal" unit="g" value={pg} onChange={setPg} />
+          <NumInput label="age" unit="yrs" value={age} onChange={setAge} placeholder="e.g. 32" />
+
+          <Pills
+            label="sex"
+            value={sex}
+            onChange={setSex}
+            options={[
+              { id: "male", label: "male" },
+              { id: "female", label: "female" },
+              { id: "other", label: "other" },
+            ]}
+          />
+          <Pills
+            label="fitness level"
+            hint="used to refine calorie estimates"
+            value={fitness}
+            onChange={setFitness}
+            options={[
+              { id: "beginner", label: "beginner" },
+              { id: "intermediate", label: "intermediate" },
+              { id: "advanced", label: "advanced" },
+            ]}
+          />
         </div>
 
         <button
@@ -121,7 +154,7 @@ export default function Settings({ settings, onClose, onSaved }) {
   );
 }
 
-function Field({ label, unit, value, onChange }) {
+function NumInput({ label, unit, value, onChange, placeholder }) {
   return (
     <label>
       <div
@@ -150,6 +183,7 @@ function Field({ label, unit, value, onChange }) {
         <input
           type="number"
           value={value}
+          placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
           style={{
             flex: 1,
@@ -166,8 +200,65 @@ function Field({ label, unit, value, onChange }) {
             width: "100%",
           }}
         />
-        <span style={{ fontSize: 13, color: "rgba(26,23,22,0.5)", fontFamily: "var(--mono)" }}>{unit}</span>
+        {unit && <span style={{ fontSize: 13, color: "rgba(26,23,22,0.5)", fontFamily: "var(--mono)" }}>{unit}</span>}
       </div>
     </label>
+  );
+}
+
+function Pills({ label, hint, value, onChange, options }) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 10.5,
+          color: "rgba(26,23,22,0.5)",
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+          fontFamily: "var(--mono)",
+          marginBottom: hint ? 2 : 6,
+        }}
+      >
+        {label}
+      </div>
+      {hint && (
+        <div
+          style={{
+            fontSize: 11,
+            color: "rgba(26,23,22,0.45)",
+            marginBottom: 6,
+            lineHeight: 1.3,
+          }}
+        >
+          {hint}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {options.map((opt) => {
+          const active = value === opt.id;
+          return (
+            <button
+              key={opt.id}
+              onClick={() => onChange(active ? "" : opt.id)}
+              style={{
+                flex: "1 1 90px",
+                minWidth: 0,
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: active ? ACCENT : "#fff",
+                color: active ? "#fff" : "rgba(26,23,22,0.7)",
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: -0.1,
+                border: active ? "1px solid transparent" : "1px solid rgba(26,23,22,0.06)",
+                transition: "all 120ms",
+              }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

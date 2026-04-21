@@ -9,14 +9,17 @@ const MET = {
   strength: 5.0,
 };
 
-function fallbackCalories({ activity, durationMin, rpe, bodyWeightKg }) {
+function fallbackCalories({ activity, durationMin, rpe, bodyWeightKg, sex, age, fitnessLevel }) {
   const met = MET[activity] ?? 4.0;
   const weight = Number(bodyWeightKg) || 75;
   const mins = Number(durationMin) || 0;
   let kcal = met * weight * (mins / 60);
-  if (rpe && rpe > 0) {
-    kcal *= 0.7 + Number(rpe) * 0.06;
-  }
+  if (rpe && rpe > 0) kcal *= 0.7 + Number(rpe) * 0.06;
+  if (sex === "female") kcal *= 0.92;
+  else if (sex === "other") kcal *= 0.96;
+  if (age && age > 25) kcal *= Math.max(0.85, 1 - (Number(age) - 25) * 0.002);
+  if (fitnessLevel === "intermediate") kcal *= 0.96;
+  else if (fitnessLevel === "advanced") kcal *= 0.92;
   return Math.max(0, Math.round(kcal));
 }
 
@@ -26,19 +29,26 @@ function getClient() {
   return new Anthropic({ apiKey: key });
 }
 
-export async function estimateCalories({ activity, durationMin, rpe, bodyWeightKg }) {
+export async function estimateCalories({ activity, durationMin, rpe, bodyWeightKg, sex, age, fitnessLevel }) {
   if (!durationMin || durationMin <= 0) return 0;
   const client = getClient();
-  if (!client) return fallbackCalories({ activity, durationMin, rpe, bodyWeightKg });
+  const fbArgs = { activity, durationMin, rpe, bodyWeightKg, sex, age, fitnessLevel };
+  if (!client) return fallbackCalories(fbArgs);
 
-  const prompt = `Estimate calories burned for this session. Return ONLY a strict JSON object with integer calories.
+  const prompt = `Estimate calories burned for this session using standard exercise physiology. Return ONLY a strict JSON object with integer calories, no prose.
 
-Activity: ${activity}
-Duration (min): ${durationMin}
-RPE (1-10): ${rpe ?? "not provided"}
-Body weight (kg): ${bodyWeightKg}
+Session:
+- Activity: ${activity}
+- Duration: ${durationMin} min
+- RPE (1-10, perceived effort): ${rpe ?? "not provided"}
 
-Respond with exactly: {"calories": <integer>}`;
+Athlete:
+- Body weight: ${bodyWeightKg} kg
+- Sex: ${sex || "not provided"}
+- Age: ${age ?? "not provided"}
+- Fitness level: ${fitnessLevel || "not provided"} ${fitnessLevel ? "(more fit = more metabolic efficiency = slightly fewer kcal for the same work)" : ""}
+
+Account for the activity's typical MET, how effort (RPE) scales intensity, and how sex/age/fitness shift burn vs the 75kg male default. Respond with exactly: {"calories": <integer>}`;
 
   try {
     const resp = await client.messages.create({
@@ -59,7 +69,7 @@ Respond with exactly: {"calories": <integer>}`;
     return cals;
   } catch (err) {
     console.error("[anthropic] calorie estimate failed:", err.message);
-    return fallbackCalories({ activity, durationMin, rpe, bodyWeightKg });
+    return fallbackCalories(fbArgs);
   }
 }
 

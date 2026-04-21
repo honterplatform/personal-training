@@ -49,6 +49,9 @@ router.put("/:date/:activity", async (req, res) => {
       durationMin: entry.durationMin,
       rpe: entry.rpe,
       bodyWeightKg: settings.bodyWeightKg,
+      sex: settings.sex,
+      age: settings.age,
+      fitnessLevel: settings.fitnessLevel,
     });
     entry.caloriesBurned = cals;
     await entry.save();

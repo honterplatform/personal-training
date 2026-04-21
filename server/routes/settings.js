@@ -15,10 +15,13 @@ router.get("/", async (req, res) => {
 });
 
 router.put("/", async (req, res) => {
-  const { bodyWeightKg, proteinGoalG } = req.body || {};
+  const body = req.body || {};
   const s = await getOrCreate();
-  if (bodyWeightKg != null) s.bodyWeightKg = Number(bodyWeightKg);
-  if (proteinGoalG != null) s.proteinGoalG = Number(proteinGoalG);
+  if ("bodyWeightKg" in body) s.bodyWeightKg = Number(body.bodyWeightKg);
+  if ("proteinGoalG" in body) s.proteinGoalG = Number(body.proteinGoalG);
+  if ("sex" in body) s.sex = body.sex || null;
+  if ("age" in body) s.age = body.age === "" || body.age == null ? null : Number(body.age);
+  if ("fitnessLevel" in body) s.fitnessLevel = body.fitnessLevel || null;
   await s.save();
   res.json(s);
 });
