@@ -2,7 +2,7 @@ import { ActivityIndicator, View } from "react-native";
 import { useStore } from "../src/lib/store";
 import { colors } from "../src/lib/theme";
 import LoginScreen from "../src/components/LoginScreen";
-import HomePlaceholder from "../src/components/HomePlaceholder";
+import HomeScreen from "../src/components/HomeScreen";
 
 export default function Index() {
   const { authState } = useStore();
@@ -15,5 +15,5 @@ export default function Index() {
     );
   }
   if (authState === "unauthed") return <LoginScreen />;
-  return <HomePlaceholder />;
+  return <HomeScreen />;
 }
