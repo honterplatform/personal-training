@@ -1,61 +1,46 @@
-import crypto from "crypto";
+import { clerkMiddleware, getAuth, createClerkClient } from "@clerk/express";
+import User from "./models/User.js";
 
-const COOKIE_NAME = "log_session";
-const MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
-
-function sign(value, secret) {
-  const hmac = crypto.createHmac("sha256", secret).update(value).digest("hex");
-  return `${value}.${hmac}`;
+let _clerk = null;
+export function clerk() {
+  if (_clerk) return _clerk;
+  const secretKey = process.env.CLERK_SECRET_KEY;
+  if (!secretKey) throw new Error("CLERK_SECRET_KEY not set");
+  _clerk = createClerkClient({ secretKey });
+  return _clerk;
 }
 
-function verify(token, secret) {
-  if (!token) return null;
-  const idx = token.lastIndexOf(".");
-  if (idx < 0) return null;
-  const value = token.slice(0, idx);
-  const sig = token.slice(idx + 1);
-  const expected = crypto.createHmac("sha256", secret).update(value).digest("hex");
-  try {
-    const ok = crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"));
-    if (!ok) return null;
-  } catch {
-    return null;
+export function clerkAuth() {
+  return clerkMiddleware();
+}
+
+/**
+ * Pulls the Clerk user id off the request, ensures we have a matching User
+ * row in Mongo (lazy-created on first authenticated request), and attaches
+ * { req.userId, req.user }.
+ */
+export async function requireAuth(req, res, next) {
+  const auth = getAuth(req);
+  if (!auth?.userId) return res.status(401).json({ error: "unauthorized" });
+
+  let user = await User.findById(auth.userId);
+  if (!user) {
+    let email = "";
+    let displayName = "";
+    try {
+      const cu = await clerk().users.getUser(auth.userId);
+      email = cu.emailAddresses?.[0]?.emailAddress || "";
+      displayName =
+        cu.firstName || cu.lastName
+          ? `${cu.firstName || ""} ${cu.lastName || ""}`.trim()
+          : cu.username || "";
+    } catch (err) {
+      console.warn("[clerk] could not fetch user:", err.message);
+    }
+    user = await User.create({ _id: auth.userId, email, displayName });
   }
-  // value is "<userId>.<issuedAt>"
-  const [userId, issuedAt] = value.split(".");
-  if (!userId || !issuedAt) return null;
-  const ms = Number(issuedAt);
-  if (!ms || Date.now() - ms > MAX_AGE_MS) return null;
-  return { userId, issuedAt: ms };
-}
 
-export function issueSession(res, userId) {
-  const secret = process.env.COOKIE_SECRET;
-  const value = `${userId}.${Date.now()}`;
-  const token = sign(value, secret);
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: MAX_AGE_MS,
-    path: "/",
-  });
-}
-
-export function clearSession(res) {
-  res.clearCookie(COOKIE_NAME, { path: "/" });
-}
-
-export function requireAuth(req, res, next) {
-  const secret = process.env.COOKIE_SECRET;
-  const token = req.cookies?.[COOKIE_NAME];
-  const session = verify(token, secret);
-  if (!session) return res.status(401).json({ error: "unauthorized" });
-  req.userId = session.userId;
+  req.userId = auth.userId;
+  req.user = user;
   next();
-}
-
-export function readSession(req) {
-  const secret = process.env.COOKIE_SECRET;
-  return verify(req.cookies?.[COOKIE_NAME], secret);
 }

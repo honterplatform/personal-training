@@ -1,11 +1,10 @@
 import "dotenv/config";
 import express from "express";
-import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./db.js";
-import { requireAuth } from "./auth.js";
+import { clerkAuth, requireAuth } from "./auth.js";
 import authRoutes from "./routes/auth.js";
 import trackerRoutes from "./routes/trackers.js";
 import entryRoutes from "./routes/entries.js";
@@ -15,7 +14,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 app.use(express.json({ limit: "1mb" }));
-app.use(cookieParser());
 
 if (process.env.NODE_ENV !== "production") {
   app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174"], credentials: true }));
@@ -23,10 +21,12 @@ if (process.env.NODE_ENV !== "production") {
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
-// Auth surface — most are public; the protected ones use requireAuth inline
-app.use("/api/auth", authRoutes);
+// Clerk middleware reads the Authorization Bearer token (or session cookie),
+// verifies the JWT, and attaches auth info to the request. requireAuth then
+// lazy-creates the matching User row in our DB.
+app.use(clerkAuth());
 
-// Everything else requires a logged-in user
+app.use("/api/auth", authRoutes);
 app.use("/api/trackers", requireAuth, trackerRoutes);
 app.use("/api/entries", requireAuth, entryRoutes);
 app.use("/api/coach", requireAuth, coachRoutes);

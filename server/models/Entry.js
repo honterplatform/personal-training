@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const EntrySchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    userId: { type: String, required: true, index: true },
     trackerId: { type: mongoose.Schema.Types.ObjectId, ref: "Tracker", required: true, index: true },
-    date: { type: String, required: true }, // YYYY-MM-DD (user's local timezone)
+    date: { type: String, required: true },
 
     // Workout fields
     durationMin: { type: Number, default: null },
@@ -18,7 +18,7 @@ const EntrySchema = new mongoose.Schema(
 
     // Common
     notes: { type: String, default: "" },
-    done: { type: Boolean, default: true }, // intake/workout entries are "logged" by existing
+    done: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

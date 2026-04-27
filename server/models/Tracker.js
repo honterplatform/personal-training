@@ -4,17 +4,17 @@ const TargetSchema = new mongoose.Schema(
   {
     period: { type: String, enum: ["daily", "weekly"], default: "weekly" },
     value: { type: Number, default: null },
-    metric: { type: String, default: "sessions" }, // sessions | minutes | km | amount
+    metric: { type: String, default: "sessions" },
   },
   { _id: false }
 );
 
 const TrackerSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    userId: { type: String, required: true, index: true },
     kind: { type: String, enum: ["workout", "intake"], required: true },
     name: { type: String, required: true, trim: true },
-    unit: { type: String, default: "" }, // intake unit: "g", "mg", "ml", etc; workout: "" (sessions counted)
+    unit: { type: String, default: "" },
     target: { type: TargetSchema, default: () => ({}) },
     pinned: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
