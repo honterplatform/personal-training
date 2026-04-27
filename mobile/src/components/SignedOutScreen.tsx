@@ -9,35 +9,71 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle, Defs, RadialGradient as SvgRadial, Stop } from "react-native-svg";
+import { useSignIn, useSignUp } from "@clerk/clerk-expo";
 import { colors, fonts } from "../lib/theme";
-import { useStore } from "../lib/store";
 
-type Mode = "login" | "signup";
+type Mode = "signup" | "login";
+type Step = "credentials" | "verify";
 
 export default function SignedOutScreen() {
-  const { signup, login } = useStore();
+  const { signUp, setActive: setSignUpActive, isLoaded: signUpLoaded } = useSignUp();
+  const { signIn, setActive: setSignInActive, isLoaded: signInLoaded } = useSignIn();
+
   const [mode, setMode] = useState<Mode>("signup");
+  const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit() {
-    if (loading || !email.trim() || !password) return;
-    setLoading(true);
+  function reset(next: Mode) {
+    setMode(next);
+    setStep("credentials");
     setError(null);
+    setCode("");
+  }
+
+  async function startSignUp() {
+    if (!signUpLoaded || !email.trim() || !password) return;
+    setLoading(true); setError(null);
     try {
-      if (mode === "signup") {
-        await signup(email.trim(), password, displayName.trim() || undefined);
+      await signUp.create({ emailAddress: email.trim(), password });
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setStep("verify");
+    } catch (e: any) {
+      setError(extractClerkError(e));
+    } finally { setLoading(false); }
+  }
+
+  async function completeSignUp() {
+    if (!signUpLoaded || !code.trim()) return;
+    setLoading(true); setError(null);
+    try {
+      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
+      if (result.status === "complete") {
+        await setSignUpActive({ session: result.createdSessionId });
       } else {
-        await login(email.trim(), password);
+        setError("Verification failed. Try again.");
       }
     } catch (e: any) {
-      setError(e?.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
+      setError(extractClerkError(e));
+    } finally { setLoading(false); }
+  }
+
+  async function logIn() {
+    if (!signInLoaded || !email.trim() || !password) return;
+    setLoading(true); setError(null);
+    try {
+      const result = await signIn.create({ identifier: email.trim(), password });
+      if (result.status === "complete") {
+        await setSignInActive({ session: result.createdSessionId });
+      } else {
+        setError("Sign in incomplete.");
+      }
+    } catch (e: any) {
+      setError(extractClerkError(e));
+    } finally { setLoading(false); }
   }
 
   return (
@@ -60,73 +96,95 @@ export default function SignedOutScreen() {
         <Text style={styles.tag}>training daily</Text>
 
         <View style={styles.form}>
-          <View style={styles.toggle}>
-            <Pressable
-              onPress={() => { setMode("signup"); setError(null); }}
-              style={[styles.toggleTab, mode === "signup" && styles.toggleTabActive]}
-            >
-              <Text style={[styles.toggleText, mode === "signup" && styles.toggleTextActive]}>
-                sign up
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => { setMode("login"); setError(null); }}
-              style={[styles.toggleTab, mode === "login" && styles.toggleTabActive]}
-            >
-              <Text style={[styles.toggleText, mode === "login" && styles.toggleTextActive]}>
-                log in
-              </Text>
-            </Pressable>
-          </View>
+          {step === "credentials" ? (
+            <>
+              <View style={styles.toggle}>
+                <Pressable
+                  onPress={() => reset("signup")}
+                  style={[styles.toggleTab, mode === "signup" && styles.toggleTabActive]}
+                >
+                  <Text style={[styles.toggleText, mode === "signup" && styles.toggleTextActive]}>
+                    sign up
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => reset("login")}
+                  style={[styles.toggleTab, mode === "login" && styles.toggleTabActive]}
+                >
+                  <Text style={[styles.toggleText, mode === "login" && styles.toggleTextActive]}>
+                    log in
+                  </Text>
+                </Pressable>
+              </View>
 
-          {mode === "signup" && (
-            <Field
-              placeholder="display name (optional)"
-              value={displayName}
-              onChangeText={setDisplayName}
-              autoCapitalize="words"
-            />
+              <Field
+                placeholder="email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="emailAddress"
+              />
+              <Field
+                placeholder="password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType={mode === "signup" ? "newPassword" : "password"}
+              />
+
+              {error && <Text style={styles.error}>{error}</Text>}
+
+              <Pressable
+                style={({ pressed }) => [styles.button, pressed && { opacity: 0.85 }]}
+                onPress={mode === "signup" ? startSignUp : logIn}
+                disabled={loading || !email.trim() || !password}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? "…" : mode === "signup" ? "create account" : "enter"}
+                </Text>
+              </Pressable>
+
+              <Text style={styles.legal}>
+                Apple + Google sign-in coming after the next dev build.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.verifyTitle}>check your email</Text>
+              <Text style={styles.verifyBody}>
+                We sent a 6-digit code to {email}. Enter it below to finish signing up.
+              </Text>
+              <Field
+                placeholder="000000"
+                value={code}
+                onChangeText={setCode}
+                keyboardType="number-pad"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="oneTimeCode"
+                maxLength={6}
+              />
+              {error && <Text style={styles.error}>{error}</Text>}
+              <Pressable
+                style={({ pressed }) => [styles.button, pressed && { opacity: 0.85 }]}
+                onPress={completeSignUp}
+                disabled={loading || code.trim().length < 6}
+              >
+                <Text style={styles.buttonText}>{loading ? "…" : "verify"}</Text>
+              </Pressable>
+              <Pressable onPress={() => reset(mode)}>
+                <Text style={styles.legal}>← change email</Text>
+              </Pressable>
+            </>
           )}
-          <Field
-            placeholder="email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Field
-            placeholder="password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            onSubmitEditing={submit}
-            returnKeyType="go"
-          />
-
-          {error && <Text style={styles.error}>{error}</Text>}
-
-          <Pressable
-            style={({ pressed }) => [styles.button, pressed && { opacity: 0.85 }]}
-            onPress={submit}
-            disabled={loading || !email.trim() || !password}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? "…" : mode === "signup" ? "create account" : "enter"}
-            </Text>
-          </Pressable>
-
-          <Text style={styles.legal}>
-            Apple + Google sign-in coming after the next dev build.
-          </Text>
         </View>
       </KeyboardAvoidingView>
 
-      <Text style={styles.footer}>
-        {mode === "signup" ? "free · gated · bogotá" : "welcome back"}
-      </Text>
+      <Text style={styles.footer}>free · secured by clerk</Text>
     </View>
   );
 }
@@ -143,96 +201,54 @@ function Field(props: React.ComponentProps<typeof TextInput>) {
   );
 }
 
+function extractClerkError(e: any): string {
+  const msg = e?.errors?.[0]?.longMessage || e?.errors?.[0]?.message || e?.message;
+  if (msg) return msg;
+  return "Something went wrong";
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.inkDark, paddingHorizontal: 32 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  brand: {
-    fontFamily: fonts.serif,
-    fontSize: 88,
-    lineHeight: 92,
-    color: colors.cream,
-    letterSpacing: -3,
-  },
-  tag: {
-    fontFamily: fonts.mono,
-    fontSize: 12,
-    letterSpacing: 2,
-    color: colors.cream50,
-    marginTop: 10,
-    textTransform: "uppercase",
-  },
+  brand: { fontFamily: fonts.serif, fontSize: 88, lineHeight: 92, color: colors.cream, letterSpacing: -3 },
+  tag: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2, color: colors.cream50, marginTop: 10, textTransform: "uppercase" },
   form: { width: "100%", maxWidth: 340, marginTop: 40, gap: 10 },
   toggle: {
-    flexDirection: "row",
-    backgroundColor: colors.cream08,
-    borderRadius: 999,
-    padding: 4,
-    marginBottom: 10,
+    flexDirection: "row", backgroundColor: colors.cream08, borderRadius: 999,
+    padding: 4, marginBottom: 10,
   },
-  toggleTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 999,
-  },
+  toggleTab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 999 },
   toggleTabActive: { backgroundColor: colors.accent },
   toggleText: {
-    fontFamily: fonts.sansSemibold,
-    fontSize: 13,
-    color: colors.cream50,
-    letterSpacing: 0.4,
-    textTransform: "lowercase",
+    fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.cream50,
+    letterSpacing: 0.4, textTransform: "lowercase",
   },
   toggleTextActive: { color: "#fff" },
   field: {
-    backgroundColor: colors.cream08,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: "rgba(244,239,229,0.1)",
+    backgroundColor: colors.cream08, borderRadius: 14, paddingHorizontal: 14,
+    paddingVertical: 14, borderWidth: 1, borderColor: "rgba(244,239,229,0.1)",
   },
-  input: {
-    color: colors.cream,
-    fontSize: 16,
-    fontFamily: fonts.sans,
-    padding: 0,
-  },
-  error: {
-    color: colors.accent,
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    letterSpacing: 0.3,
-  },
+  input: { color: colors.cream, fontSize: 16, fontFamily: fonts.sans, padding: 0 },
+  error: { color: colors.accent, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.3 },
   button: {
-    marginTop: 4,
-    backgroundColor: colors.accent,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
+    marginTop: 4, backgroundColor: colors.accent, borderRadius: 14,
+    paddingVertical: 14, alignItems: "center",
   },
-  buttonText: {
-    color: "#fff",
-    fontFamily: fonts.sansSemibold,
-    fontSize: 14,
-  },
+  buttonText: { color: "#fff", fontFamily: fonts.sansSemibold, fontSize: 14 },
   legal: {
-    marginTop: 6,
-    textAlign: "center",
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 0.6,
-    color: colors.cream35,
+    marginTop: 6, textAlign: "center",
+    fontFamily: fonts.mono, fontSize: 10, letterSpacing: 0.6, color: colors.cream35,
+  },
+  verifyTitle: {
+    fontFamily: fonts.serif, fontSize: 32, color: colors.cream,
+    textAlign: "center", lineHeight: 36, letterSpacing: -0.5,
+  },
+  verifyBody: {
+    fontFamily: fonts.sans, fontSize: 14, color: colors.cream70,
+    textAlign: "center", lineHeight: 20, marginBottom: 8,
   },
   footer: {
-    position: "absolute",
-    bottom: 40,
-    left: 0,
-    right: 0,
-    textAlign: "center",
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: colors.cream35,
+    position: "absolute", bottom: 40, left: 0, right: 0, textAlign: "center",
+    fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.5, color: colors.cream35,
   },
 });

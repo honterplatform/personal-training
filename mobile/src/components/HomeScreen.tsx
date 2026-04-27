@@ -4,7 +4,7 @@ import { useStore } from "../lib/store";
 import { colors, fonts } from "../lib/theme";
 
 export default function HomeScreen() {
-  const { user, trackers, weekEntries, logout } = useStore();
+  const { user, trackers, weekEntries, signOut } = useStore();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -36,7 +36,7 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <Pressable onPress={logout} style={styles.logoutBtn}>
+        <Pressable onPress={signOut} style={styles.logoutBtn}>
           <Text style={styles.logoutText}>log out</Text>
         </Pressable>
       </ScrollView>
