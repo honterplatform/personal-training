@@ -1,74 +1,114 @@
 import express from "express";
 import Entry from "../models/Entry.js";
-import Settings from "../models/Settings.js";
+import Tracker from "../models/Tracker.js";
+import User from "../models/User.js";
 import { estimateCalories } from "../anthropic.js";
 
 const router = express.Router();
 
-const ALLOWED = ["walk", "squash", "taekwondo", "strength", "protein"];
-
 router.get("/", async (req, res) => {
   const { start, end } = req.query;
   if (!start || !end) return res.status(400).json({ error: "start and end required" });
-  const entries = await Entry.find({ date: { $gte: start, $lte: end } }).sort({ date: 1 });
-  res.json(entries);
+  const list = await Entry.find({
+    userId: req.userId,
+    date: { $gte: start, $lte: end },
+  }).sort({ date: 1, createdAt: 1 });
+  res.json(list);
 });
 
-router.put("/:date/:activity", async (req, res) => {
-  const { date, activity } = req.params;
-  if (!ALLOWED.includes(activity)) return res.status(400).json({ error: "bad activity" });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: "bad date" });
-
+router.post("/", async (req, res) => {
   const body = req.body || {};
-  const update = { date, activity };
+  if (!body.trackerId) return res.status(400).json({ error: "trackerId required" });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || "")) return res.status(400).json({ error: "bad date" });
 
-  const normNum = (v) => (v === "" || v == null ? null : Number(v));
-  if ("done" in body) update.done = !!body.done;
-  if ("distanceKm" in body) update.distanceKm = normNum(body.distanceKm);
-  if ("durationMin" in body) update.durationMin = normNum(body.durationMin);
-  if ("rpe" in body) update.rpe = normNum(body.rpe);
-  if ("proteinG" in body) update.proteinG = normNum(body.proteinG);
-  if ("notes" in body) update.notes = body.notes || "";
+  const tracker = await Tracker.findOne({ _id: body.trackerId, userId: req.userId });
+  if (!tracker) return res.status(404).json({ error: "tracker not found" });
 
-  let entry = await Entry.findOneAndUpdate(
-    { date, activity },
-    { $set: update },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  );
+  const entry = await Entry.create({
+    userId: req.userId,
+    trackerId: tracker._id,
+    date: body.date,
+    durationMin: num(body.durationMin),
+    distanceKm: num(body.distanceKm),
+    rpe: num(body.rpe),
+    amount: num(body.amount),
+    notes: (body.notes || "").toString().slice(0, 1000),
+  });
 
-  if (
-    activity !== "protein" &&
-    entry.done &&
-    entry.durationMin &&
-    entry.durationMin > 0
-  ) {
-    let settings = await Settings.findOne();
-    if (!settings) settings = await Settings.create({});
-    const cals = await estimateCalories({
-      activity,
+  if (tracker.kind === "workout" && entry.durationMin && entry.durationMin > 0) {
+    const user = await User.findById(req.userId).lean();
+    const result = await estimateCalories({
+      activityName: tracker.name,
       durationMin: entry.durationMin,
       rpe: entry.rpe,
-      bodyWeightKg: settings.bodyWeightKg,
-      sex: settings.sex,
-      age: settings.age,
-      fitnessLevel: settings.fitnessLevel,
+      bodyWeightKg: user?.demographics?.weightKg,
+      heightCm: user?.demographics?.heightCm,
+      sex: user?.demographics?.sex,
+      age: user?.demographics?.age,
+      fitnessLevel: user?.demographics?.fitnessLevel,
     });
-    entry.caloriesBurned = cals;
+    entry.caloriesBurned = result.calories;
+    entry.caloriesBurnedSource = result.source;
     await entry.save();
-  } else if (!entry.done || !entry.durationMin) {
-    if (entry.caloriesBurned != null) {
-      entry.caloriesBurned = null;
-      await entry.save();
-    }
   }
 
+  res.status(201).json(entry);
+});
+
+router.put("/:id", async (req, res) => {
+  const entry = await Entry.findOne({ _id: req.params.id, userId: req.userId });
+  if (!entry) return res.status(404).json({ error: "not found" });
+  const tracker = await Tracker.findOne({ _id: entry.trackerId, userId: req.userId });
+  if (!tracker) return res.status(404).json({ error: "tracker not found" });
+
+  const body = req.body || {};
+  let needsRecalc = false;
+  if ("durationMin" in body) { entry.durationMin = num(body.durationMin); needsRecalc = true; }
+  if ("distanceKm" in body) { entry.distanceKm = num(body.distanceKm); }
+  if ("rpe" in body) { entry.rpe = num(body.rpe); needsRecalc = true; }
+  if ("amount" in body) { entry.amount = num(body.amount); }
+  if ("notes" in body) entry.notes = (body.notes || "").toString().slice(0, 1000);
+
+  // Manual override of calories
+  if ("caloriesBurned" in body) {
+    if (body.caloriesBurned == null || body.caloriesBurned === "") {
+      entry.caloriesBurned = null;
+      entry.caloriesBurnedSource = null;
+    } else {
+      entry.caloriesBurned = num(body.caloriesBurned);
+      entry.caloriesBurnedSource = "manual";
+    }
+    needsRecalc = false;
+  } else if (needsRecalc && tracker.kind === "workout" && entry.durationMin && entry.durationMin > 0
+             && entry.caloriesBurnedSource !== "manual") {
+    const user = await User.findById(req.userId).lean();
+    const result = await estimateCalories({
+      activityName: tracker.name,
+      durationMin: entry.durationMin,
+      rpe: entry.rpe,
+      bodyWeightKg: user?.demographics?.weightKg,
+      heightCm: user?.demographics?.heightCm,
+      sex: user?.demographics?.sex,
+      age: user?.demographics?.age,
+      fitnessLevel: user?.demographics?.fitnessLevel,
+    });
+    entry.caloriesBurned = result.calories;
+    entry.caloriesBurnedSource = result.source;
+  }
+
+  await entry.save();
   res.json(entry);
 });
 
-router.delete("/:date/:activity", async (req, res) => {
-  const { date, activity } = req.params;
-  await Entry.deleteOne({ date, activity });
+router.delete("/:id", async (req, res) => {
+  await Entry.deleteOne({ _id: req.params.id, userId: req.userId });
   res.json({ ok: true });
 });
+
+function num(v) {
+  if (v === "" || v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 export default router;

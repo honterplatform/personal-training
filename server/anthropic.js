@@ -1,16 +1,37 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const MODEL = "claude-sonnet-4-6";
+const ESTIMATION_MODEL = "claude-haiku-4-5-20251001";
+const COACH_MODEL = "claude-sonnet-4-6";
 
-const MET = {
-  walk: 3.5,
-  squash: 7.3,
-  taekwondo: 10.0,
-  strength: 5.0,
-};
+function getClient() {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return null;
+  return new Anthropic({ apiKey: key });
+}
 
-function fallbackCalories({ activity, durationMin, rpe, bodyWeightKg, sex, age, fitnessLevel }) {
-  const met = MET[activity] ?? 4.0;
+// ---------- MET fallback (used if API fails or key missing) ----------
+
+const MET_BUCKETS = [
+  { match: /walk|stroll/i,                         met: 3.5 },
+  { match: /run|jog/i,                             met: 9.0 },
+  { match: /cycle|cycling|bike|biking/i,           met: 7.5 },
+  { match: /swim/i,                                met: 8.0 },
+  { match: /squash|racquetball/i,                  met: 7.3 },
+  { match: /tennis|padel|pickleball|badminton/i,   met: 6.5 },
+  { match: /taekwondo|karate|judo|bjj|martial/i,   met: 10.0 },
+  { match: /box(?:ing)?|kickbox/i,                 met: 9.0 },
+  { match: /crossfit|hiit|interval/i,              met: 8.0 },
+  { match: /strength|lift|weight|gym/i,            met: 5.0 },
+  { match: /yoga|stretch|pilates|mobility/i,       met: 3.0 },
+  { match: /hike|hiking|climb/i,                   met: 7.0 },
+  { match: /soccer|football|basketball|hockey/i,   met: 8.0 },
+  { match: /dance|salsa|zumba/i,                   met: 6.0 },
+  { match: /rowing|elliptical/i,                   met: 7.0 },
+];
+
+function fallbackCalories({ activityName, durationMin, rpe, bodyWeightKg, sex, age, fitnessLevel }) {
+  const bucket = MET_BUCKETS.find((b) => b.match.test(activityName || ""));
+  const met = bucket?.met ?? 5.0;
   const weight = Number(bodyWeightKg) || 75;
   const mins = Number(durationMin) || 0;
   let kcal = met * weight * (mins / 60);
@@ -23,186 +44,139 @@ function fallbackCalories({ activity, durationMin, rpe, bodyWeightKg, sex, age, 
   return Math.max(0, Math.round(kcal));
 }
 
-function getClient() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return null;
-  return new Anthropic({ apiKey: key });
-}
+// ---------- Calorie estimate (Haiku) ----------
 
-export async function estimateCalories({ activity, durationMin, rpe, bodyWeightKg, sex, age, fitnessLevel }) {
-  if (!durationMin || durationMin <= 0) return 0;
+export async function estimateCalories({
+  activityName,
+  durationMin,
+  rpe,
+  bodyWeightKg,
+  heightCm,
+  sex,
+  age,
+  fitnessLevel,
+}) {
+  if (!durationMin || durationMin <= 0) return { calories: 0, source: "ai" };
+  const fallback = () => ({
+    calories: fallbackCalories({ activityName, durationMin, rpe, bodyWeightKg, sex, age, fitnessLevel }),
+    source: "fallback",
+  });
+
   const client = getClient();
-  const fbArgs = { activity, durationMin, rpe, bodyWeightKg, sex, age, fitnessLevel };
-  if (!client) return fallbackCalories(fbArgs);
+  if (!client) return fallback();
 
-  const prompt = `Estimate calories burned for this session using standard exercise physiology. Return ONLY a strict JSON object with integer calories, no prose.
+  const athleteLines = [
+    bodyWeightKg ? `Body weight: ${bodyWeightKg} kg` : null,
+    heightCm ? `Height: ${heightCm} cm` : null,
+    sex ? `Sex: ${sex}` : null,
+    age ? `Age: ${age}` : null,
+    fitnessLevel ? `Fitness level: ${fitnessLevel}` : null,
+  ].filter(Boolean).join("\n  ");
+
+  const prompt = `Estimate calories burned for one session using standard exercise physiology (MET × body weight × hours, adjusted by intensity and the athlete's profile).
 
 Session:
-- Activity: ${activity}
-- Duration: ${durationMin} min
-- RPE (1-10, perceived effort): ${rpe ?? "not provided"}
+  Activity: ${activityName}
+  Duration: ${durationMin} minutes
+  RPE (1-10, perceived effort): ${rpe ?? "not provided"}
 
 Athlete:
-- Body weight: ${bodyWeightKg} kg
-- Sex: ${sex || "not provided"}
-- Age: ${age ?? "not provided"}
-- Fitness level: ${fitnessLevel || "not provided"} ${fitnessLevel ? "(more fit = more metabolic efficiency = slightly fewer kcal for the same work)" : ""}
+  ${athleteLines || "(no demographic data)"}
 
-Account for the activity's typical MET, how effort (RPE) scales intensity, and how sex/age/fitness shift burn vs the 75kg male default. Respond with exactly: {"calories": <integer>}`;
+If the activity is unfamiliar, infer the closest analogous activity by movement pattern and intensity. Account for sex/age/fitness shifting burn vs the 75 kg male default.
+
+Return ONLY a strict JSON object: {"calories": <integer>}`;
 
   try {
     const resp = await client.messages.create({
-      model: MODEL,
+      model: ESTIMATION_MODEL,
       max_tokens: 100,
       temperature: 0,
       messages: [{ role: "user", content: prompt }],
     });
-    const text = resp.content
-      .filter((c) => c.type === "text")
-      .map((c) => c.text)
-      .join("");
+    const text = resp.content.filter((c) => c.type === "text").map((c) => c.text).join("");
     const match = text.match(/\{[^}]*"calories"[^}]*\}/);
     if (!match) throw new Error("no json in response");
     const parsed = JSON.parse(match[0]);
     const cals = Math.round(Number(parsed.calories));
     if (!Number.isFinite(cals) || cals < 0) throw new Error("bad calories");
-    return cals;
+    return { calories: cals, source: "ai" };
   } catch (err) {
     console.error("[anthropic] calorie estimate failed:", err.message);
-    return fallbackCalories(fbArgs);
+    return fallback();
   }
 }
 
-function computeWeeklyTotals(entries) {
-  const t = { walks: 0, walkKm: 0, squash: 0, tkd: 0, strength: 0, proteinDays: 0, calories: 0 };
-  for (const e of entries) {
-    if (e.caloriesBurned) t.calories += Number(e.caloriesBurned) || 0;
-    if (!e.done) continue;
-    if (e.activity === "walk") {
-      t.walks += 1;
-      t.walkKm += Number(e.distanceKm) || 0;
+// ---------- Coach context ----------
+
+function buildContextBlock({ user, trackers, weekEntries, weekStart, selectedDate, dayEntries }) {
+  const trackerById = Object.fromEntries(trackers.map((t) => [String(t._id), t]));
+
+  const weeklyTotals = {};
+  for (const t of trackers) {
+    weeklyTotals[String(t._id)] = { sessions: 0, minutes: 0, km: 0, amount: 0, calories: 0 };
+  }
+  for (const e of weekEntries) {
+    const tid = String(e.trackerId);
+    if (!weeklyTotals[tid]) continue;
+    const tracker = trackerById[tid];
+    if (tracker?.kind === "workout") {
+      weeklyTotals[tid].sessions += 1;
+      if (e.durationMin) weeklyTotals[tid].minutes += Number(e.durationMin);
+      if (e.distanceKm) weeklyTotals[tid].km += Number(e.distanceKm);
+      if (e.caloriesBurned) weeklyTotals[tid].calories += Number(e.caloriesBurned);
+    } else if (tracker?.kind === "intake") {
+      if (e.amount) weeklyTotals[tid].amount += Number(e.amount);
     }
-    if (e.activity === "squash") t.squash += 1;
-    if (e.activity === "taekwondo") t.tkd += 1;
-    if (e.activity === "strength") t.strength += 1;
-    if (e.activity === "protein") t.proteinDays += 1;
-  }
-  t.totalDone = t.walks + t.squash + t.tkd + t.strength + t.proteinDays;
-  return t;
-}
-
-export async function weeklySummary({ entries, settings, weekStart }) {
-  const totals = computeWeeklyTotals(entries);
-
-  if (totals.totalDone === 0) {
-    return `Week of ${weekStart} is still empty — no completed sessions yet. Log a walk, a training, or your protein and check back once there's real data to review.`;
   }
 
-  const client = getClient();
-  if (!client) return "Summary unavailable, try again in a moment.";
-
-  const rows = entries
-    .map((e) => {
-      const parts = [e.date, e.activity, e.done ? "DONE" : "not done"];
-      if (e.distanceKm != null) parts.push(`${e.distanceKm}km`);
-      if (e.durationMin != null) parts.push(`${e.durationMin}min`);
-      if (e.rpe != null) parts.push(`RPE${e.rpe}`);
-      if (e.proteinG != null) parts.push(`${e.proteinG}g protein`);
-      if (e.caloriesBurned != null) parts.push(`${e.caloriesBurned}kcal`);
-      if (e.notes) parts.push(`"${e.notes}"`);
-      return parts.join(" · ");
+  const trackerLines = trackers
+    .map((t) => {
+      const tot = weeklyTotals[String(t._id)] || {};
+      const target = t.target?.value
+        ? `target ${t.target.value} ${t.target.metric}/${t.target.period}`
+        : "no target";
+      if (t.kind === "workout") {
+        return `  · ${t.name} (workout) — ${tot.sessions} sessions / ${Math.round(tot.minutes)} min / ${tot.km.toFixed(1)} km / ${tot.calories} kcal · ${target}`;
+      }
+      return `  · ${t.name} (intake, ${t.unit || "—"}) — total ${tot.amount}${t.unit || ""} · ${target}`;
     })
     .join("\n");
 
-  const prompt = `You are a direct, grounded training coach. Review ONE week for this athlete and write a short coach note.
-
-CRITICAL RULES:
-- ONLY reference sessions that appear in the DATA below. Do NOT invent sessions, durations, distances, or patterns.
-- Use the AUTHORITATIVE TOTALS as ground truth — if a count is 0, say "missed" or "none logged", never fabricate results.
-- If data is sparse, keep the note short. Don't pad with imagined observations.
-- Plain text only, no markdown, no bullet lists, max 150 words.
-
-ATHLETE TARGETS (weekly):
-- Walks: 7 sessions totaling 42 km
-- Squash: 3 sessions
-- Taekwondo: 3 sessions
-- Strength: 1 session
-- Protein: ${settings.proteinGoalG}g per day (7 days)
-Body weight: ${settings.bodyWeightKg}kg.
-
-AUTHORITATIVE TOTALS FOR WEEK OF ${weekStart} (ground truth — do not contradict):
-- Walks done: ${totals.walks}/7  (${totals.walkKm.toFixed(1)}/42 km)
-- Squash done: ${totals.squash}/3
-- Taekwondo done: ${totals.tkd}/3
-- Strength done: ${totals.strength}/1
-- Protein days hit: ${totals.proteinDays}/7
-- Calories burned (estimated): ${totals.calories}
-
-DATA — individual entries (chronological):
-${rows}
-
-Now write the coach note. Cover: what hit the target, what was missed, and one concrete thing to focus on next week — grounded entirely in the totals above.`;
-
-  try {
-    const resp = await client.messages.create({
-      model: MODEL,
-      max_tokens: 500,
-      temperature: 0.5,
-      messages: [{ role: "user", content: prompt }],
-    });
-    return resp.content
-      .filter((c) => c.type === "text")
-      .map((c) => c.text)
-      .join("")
-      .trim();
-  } catch (err) {
-    console.error("[anthropic] summary failed:", err.message);
-    return "Summary unavailable, try again in a moment.";
-  }
-}
-
-function buildContextBlock({ settings, weekEntries, weekStart, selectedDate, dayEntries }) {
-  const totals = computeWeeklyTotals(weekEntries);
-  const dayLines = (dayEntries || [])
+  const dayLines = dayEntries
     .map((e) => {
-      const parts = [e.activity, e.done ? "DONE" : "not done"];
-      if (e.distanceKm != null) parts.push(`${e.distanceKm}km`);
+      const t = trackerById[String(e.trackerId)];
+      if (!t) return null;
+      const parts = [t.name];
       if (e.durationMin != null) parts.push(`${e.durationMin}min`);
+      if (e.distanceKm != null) parts.push(`${e.distanceKm}km`);
       if (e.rpe != null) parts.push(`RPE${e.rpe}`);
-      if (e.proteinG != null) parts.push(`${e.proteinG}g protein`);
+      if (e.amount != null) parts.push(`${e.amount}${t.unit || ""}`);
       if (e.caloriesBurned != null) parts.push(`${e.caloriesBurned}kcal`);
       if (e.notes) parts.push(`"${e.notes}"`);
       return "  · " + parts.join(" · ");
     })
+    .filter(Boolean)
     .join("\n");
-  const weekLines = (weekEntries || [])
-    .filter((e) => e.done)
-    .map((e) => {
-      const parts = [e.date, e.activity];
-      if (e.distanceKm != null) parts.push(`${e.distanceKm}km`);
-      if (e.durationMin != null) parts.push(`${e.durationMin}min`);
-      if (e.rpe != null) parts.push(`RPE${e.rpe}`);
-      if (e.proteinG != null) parts.push(`${e.proteinG}g`);
-      if (e.caloriesBurned != null) parts.push(`${e.caloriesBurned}kcal`);
-      return "  · " + parts.join(" · ");
-    })
-    .join("\n");
+
+  const totalKcal = Object.values(weeklyTotals).reduce((s, v) => s + (v.calories || 0), 0);
+
+  const demo = user.demographics || {};
+  const aboutLines = [
+    demo.weightKg ? `weight ${demo.weightKg}kg` : null,
+    demo.heightCm ? `height ${demo.heightCm}cm` : null,
+    demo.sex ? `${demo.sex}` : null,
+    demo.age ? `${demo.age}yo` : null,
+    demo.fitnessLevel ? `${demo.fitnessLevel}` : null,
+  ].filter(Boolean).join(", ") || "(no demographic data)";
 
   return `--- ATHLETE CONTEXT (regenerated each turn — use as ground truth) ---
-Body weight: ${settings?.bodyWeightKg ?? "?"}kg${settings?.sex ? `, ${settings.sex}` : ""}${settings?.age ? `, ${settings.age}yo` : ""}${settings?.fitnessLevel ? `, ${settings.fitnessLevel}` : ""}
-Daily protein goal: ${settings?.proteinGoalG ?? "?"}g
-Weekly targets: 7 walks (42km total), 3 squash, 3 taekwondo, 1 strength.
+About: ${aboutLines}
 
-Week of ${weekStart} so far:
-- Walks done: ${totals.walks}/7  (${totals.walkKm.toFixed(1)}/42 km)
-- Squash done: ${totals.squash}/3
-- Taekwondo done: ${totals.tkd}/3
-- Strength done: ${totals.strength}/1
-- Protein days hit: ${totals.proteinDays}/7
-- Calories burned this week: ${totals.calories}
+Trackers + this week's totals (week starting ${weekStart}):
+${trackerLines || "  (no trackers yet)"}
 
-This week's completed sessions:
-${weekLines || "  (none yet)"}
+Total kcal burned this week: ${totalKcal}
 
 Selected date: ${selectedDate}
 Entries on selected date:
@@ -210,20 +184,18 @@ ${dayLines || "  (nothing logged)"}
 --- END CONTEXT ---`;
 }
 
-const COACH_SYSTEM = `You are a direct, grounded personal training coach for one athlete. You have access to their settings and training data, refreshed each turn in the ATHLETE CONTEXT block.
+const COACH_SYSTEM = `You are a direct, grounded personal training coach for one athlete. You have access to their settings, trackers, and training data, refreshed each turn in the ATHLETE CONTEXT block.
 
 Rules:
-- Only reference sessions that appear in the context. NEVER invent sessions, durations, distances, or patterns.
-- Keep replies short and conversational by default — 1 to 4 sentences. Expand only when the athlete asks for detail.
-- Be honest about what's missing. If a target is at 0/3, say so plainly.
-- Plain text only — no markdown headers, no bold, no bullet lists unless explicitly asked.
-- The athlete trains in Bogotá local time. Their schedule rotates (taekwondo + squash on alternating days, strength once weekly, walks daily).`;
+- ONLY reference sessions/entries that appear in the context. NEVER invent.
+- Be honest about what is missing or off-target. "0 sessions" means missed.
+- Reply in 1 to 4 sentences by default; expand only when asked.
+- Plain text only — no markdown, no bullets unless the user explicitly asks.
+- Speak directly to the athlete in second person. Be concise and grounded in the numbers.`;
 
 export async function coachChat({ history, userMessage, contextArgs }) {
   const client = getClient();
-  if (!client) {
-    return "Coach is offline right now (no API key). Try again later.";
-  }
+  if (!client) return "Coach is offline right now (no API key). Try again later.";
 
   const context = buildContextBlock(contextArgs);
   const messages = [];
@@ -236,17 +208,13 @@ export async function coachChat({ history, userMessage, contextArgs }) {
 
   try {
     const resp = await client.messages.create({
-      model: MODEL,
+      model: COACH_MODEL,
       max_tokens: 600,
       temperature: 0.5,
       system: COACH_SYSTEM,
       messages,
     });
-    return resp.content
-      .filter((c) => c.type === "text")
-      .map((c) => c.text)
-      .join("")
-      .trim();
+    return resp.content.filter((c) => c.type === "text").map((c) => c.text).join("").trim();
   } catch (err) {
     console.error("[anthropic] coach chat failed:", err.message);
     return "Coach is having trouble responding. Try again in a moment.";
@@ -257,16 +225,16 @@ export async function coachOpener({ contextArgs }) {
   const client = getClient();
   if (!client) return "Welcome back. Log a session and I'll have something to coach against.";
 
-  const totals = computeWeeklyTotals(contextArgs.weekEntries || []);
-  if (totals.totalDone === 0) {
-    return "Fresh week — nothing logged yet. When you finish a session, mark it done and I'll start tracking. Ask me anything in the meantime.";
+  const totals = (contextArgs.weekEntries || []).filter((e) => e.caloriesBurned).length;
+  if ((contextArgs.weekEntries || []).length === 0) {
+    return "Fresh week — nothing logged yet. When you finish a session, log it and I'll start tracking. Ask me anything in the meantime.";
   }
 
   const context = buildContextBlock(contextArgs);
   try {
     const resp = await client.messages.create({
-      model: MODEL,
-      max_tokens: 300,
+      model: COACH_MODEL,
+      max_tokens: 280,
       temperature: 0.6,
       system: COACH_SYSTEM,
       messages: [
@@ -276,11 +244,7 @@ export async function coachOpener({ contextArgs }) {
         },
       ],
     });
-    return resp.content
-      .filter((c) => c.type === "text")
-      .map((c) => c.text)
-      .join("")
-      .trim();
+    return resp.content.filter((c) => c.type === "text").map((c) => c.text).join("").trim();
   } catch (err) {
     console.error("[anthropic] opener failed:", err.message);
     return "Hey — I'm here. Ask me anything about your week.";

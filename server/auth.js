@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
-const COOKIE_NAME = "log_auth";
-const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const COOKIE_NAME = "log_session";
+const MAX_AGE_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
 
 function sign(value, secret) {
   const hmac = crypto.createHmac("sha256", secret).update(value).digest("hex");
@@ -9,23 +9,30 @@ function sign(value, secret) {
 }
 
 function verify(token, secret) {
-  if (!token) return false;
+  if (!token) return null;
   const idx = token.lastIndexOf(".");
-  if (idx < 0) return false;
+  if (idx < 0) return null;
   const value = token.slice(0, idx);
   const sig = token.slice(idx + 1);
   const expected = crypto.createHmac("sha256", secret).update(value).digest("hex");
   try {
-    return crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"));
+    const ok = crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"));
+    if (!ok) return null;
   } catch {
-    return false;
+    return null;
   }
+  // value is "<userId>.<issuedAt>"
+  const [userId, issuedAt] = value.split(".");
+  if (!userId || !issuedAt) return null;
+  const ms = Number(issuedAt);
+  if (!ms || Date.now() - ms > MAX_AGE_MS) return null;
+  return { userId, issuedAt: ms };
 }
 
-export function issueCookie(res) {
+export function issueSession(res, userId) {
   const secret = process.env.COOKIE_SECRET;
-  const issuedAt = Date.now().toString();
-  const token = sign(issuedAt, secret);
+  const value = `${userId}.${Date.now()}`;
+  const token = sign(value, secret);
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -35,16 +42,20 @@ export function issueCookie(res) {
   });
 }
 
+export function clearSession(res) {
+  res.clearCookie(COOKIE_NAME, { path: "/" });
+}
+
 export function requireAuth(req, res, next) {
   const secret = process.env.COOKIE_SECRET;
   const token = req.cookies?.[COOKIE_NAME];
-  if (!verify(token, secret)) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
-  const idx = token.lastIndexOf(".");
-  const issuedAt = Number(token.slice(0, idx));
-  if (!issuedAt || Date.now() - issuedAt > MAX_AGE_MS) {
-    return res.status(401).json({ error: "expired" });
-  }
+  const session = verify(token, secret);
+  if (!session) return res.status(401).json({ error: "unauthorized" });
+  req.userId = session.userId;
   next();
+}
+
+export function readSession(req) {
+  const secret = process.env.COOKIE_SECRET;
+  return verify(req.cookies?.[COOKIE_NAME], secret);
 }
