@@ -1,0 +1,12 @@
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcodeproj
+!project.yml
+.build/
+Pods/
+.swiftpm/
+*.ipa
+*.dSYM.zip
+*.dSYM
