@@ -38,4 +38,10 @@ export const api = {
   getSummary: (weekStart) => request(`/summary/${weekStart}`),
   generateSummary: (weekStart) =>
     request(`/summary/${weekStart}`, { method: "POST" }),
+  getCoachThread: () => request(`/coach`),
+  sendCoachMessage: (message, date) =>
+    request(`/coach`, { method: "POST", body: JSON.stringify({ message, date }) }),
+  coachOpener: (date) =>
+    request(`/coach/opener`, { method: "POST", body: JSON.stringify({ date }) }),
+  resetCoach: () => request(`/coach`, { method: "DELETE" }),
 };

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api.js";
-import { todayISO, weekRange, weekStartISO } from "./lib/dates.js";
+import { todayISO, weekRange } from "./lib/dates.js";
 import Login from "./components/Login.jsx";
 import Header from "./components/Header.jsx";
 import WeeklyStrip from "./components/WeeklyStrip.jsx";
 import DatePicker from "./components/DatePicker.jsx";
 import Checklist from "./components/Checklist.jsx";
 import Settings from "./components/Settings.jsx";
+import CoachChat from "./components/CoachChat.jsx";
 
 export default function App() {
   const [authed, setAuthed] = useState(true);
@@ -15,10 +16,7 @@ export default function App() {
   const [settings, setSettings] = useState(null);
   const [weekEntries, setWeekEntries] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [summaryOpen, setSummaryOpen] = useState(false);
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summary, setSummary] = useState(null);
-  const [summaryWeek, setSummaryWeek] = useState(null);
+  const [showCoach, setShowCoach] = useState(false);
   const [error, setError] = useState("");
 
   const refreshWeek = useCallback(async (date) => {
@@ -54,21 +52,6 @@ export default function App() {
     if (authed && booted) refreshWeek(selectedDate);
   }, [selectedDate, authed, booted, refreshWeek]);
 
-  useEffect(() => {
-    if (!authed || !booted) return;
-    const ws = weekStartISO(selectedDate);
-    if (ws === summaryWeek) return;
-    setSummaryWeek(ws);
-    setSummary(null);
-    setSummaryOpen(false);
-    api
-      .getSummary(ws)
-      .then((s) => {
-        if (s?.text) setSummary(s.text);
-      })
-      .catch(() => {});
-  }, [selectedDate, authed, booted, summaryWeek]);
-
   async function handleSave(date, activity, body) {
     try {
       await api.saveEntry(date, activity, body);
@@ -86,39 +69,6 @@ export default function App() {
     } catch (e) {
       if (e.status === 401) setAuthed(false);
       else setError(e.message);
-    }
-  }
-
-  async function handleSummaryToggle() {
-    if (summaryOpen) {
-      setSummaryOpen(false);
-      return;
-    }
-    const ws = weekStartISO(selectedDate);
-    setSummaryOpen(true);
-    if (summary) return;
-    setSummaryLoading(true);
-    try {
-      const s = await api.generateSummary(ws);
-      setSummary(s.text);
-    } catch {
-      setSummary("Summary unavailable, try again in a moment.");
-    } finally {
-      setSummaryLoading(false);
-    }
-  }
-
-  async function handleSummaryRegenerate() {
-    const ws = weekStartISO(selectedDate);
-    setSummaryLoading(true);
-    setSummary(null);
-    try {
-      const s = await api.generateSummary(ws);
-      setSummary(s.text);
-    } catch {
-      setSummary("Summary unavailable, try again in a moment.");
-    } finally {
-      setSummaryLoading(false);
     }
   }
 
@@ -148,11 +98,7 @@ export default function App() {
               selectedDate={selectedDate}
               weekEntries={weekEntries}
               onSelectDate={setSelectedDate}
-              summary={summary}
-              summaryOpen={summaryOpen}
-              summaryLoading={summaryLoading}
-              onSummaryToggle={handleSummaryToggle}
-              onSummaryRegenerate={handleSummaryRegenerate}
+              onOpenCoach={() => setShowCoach(true)}
             />
           </div>
 
@@ -189,6 +135,12 @@ export default function App() {
           onSaved={(s) => setSettings(s)}
         />
       )}
+
+      <CoachChat
+        open={showCoach}
+        onClose={() => setShowCoach(false)}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 }

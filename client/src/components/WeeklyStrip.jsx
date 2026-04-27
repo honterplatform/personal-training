@@ -1,19 +1,10 @@
 import { weekDays as weekDaysOf, todayISO } from "../lib/dates.js";
 import { SparkIcon } from "./Icons.jsx";
 
-const RefreshIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 12a9 9 0 0115-6.7L21 8" />
-    <path d="M21 3v5h-5" />
-    <path d="M21 12a9 9 0 01-15 6.7L3 16" />
-    <path d="M3 21v-5h5" />
-  </svg>
-);
-
 const ACCENT = "#ff5a3c";
 const DAY_SHORT = ["m", "t", "w", "t", "f", "s", "s"];
 
-export default function WeeklyStrip({ selectedDate, weekEntries, onSelectDate, summary, summaryOpen, summaryLoading, onSummaryToggle, onSummaryRegenerate }) {
+export default function WeeklyStrip({ selectedDate, weekEntries, onSelectDate, onOpenCoach }) {
   const days = weekDaysOf(selectedDate);
   const today = todayISO();
   const totals = computeTotals(days, weekEntries);
@@ -191,73 +182,24 @@ export default function WeeklyStrip({ selectedDate, weekEntries, onSelectDate, s
           </div>
         </div>
         <button
-          onClick={onSummaryToggle}
+          onClick={onOpenCoach}
           style={{
             display: "flex",
             alignItems: "center",
             gap: 8,
             padding: "12px 16px",
             borderRadius: 999,
-            background: summaryOpen ? ACCENT : "rgba(244,239,229,0.08)",
-            color: summaryOpen ? "#17140f" : "#f4efe5",
+            background: ACCENT,
+            color: "#17140f",
             fontSize: 13,
             fontWeight: 600,
             letterSpacing: -0.1,
-            border: "1px solid rgba(244,239,229,0.08)",
+            border: "1px solid transparent",
           }}
         >
-          <SparkIcon size={15} /> coach
+          <SparkIcon size={15} /> talk to coach
         </button>
       </div>
-
-      {summaryOpen && (
-        <div
-          style={{
-            marginTop: 14,
-            padding: "14px 16px",
-            background: "rgba(244,239,229,0.05)",
-            borderRadius: 18,
-            border: "1px solid rgba(244,239,229,0.08)",
-            fontSize: 13.5,
-            lineHeight: 1.55,
-            color: "rgba(244,239,229,0.85)",
-            position: "relative",
-          }}
-        >
-          {summaryLoading ? (
-            <div style={{ color: "rgba(244,239,229,0.5)" }}>
-              <span className="log-blink">●</span> generating coach summary…
-            </div>
-          ) : (
-            <>
-              <div style={{ paddingRight: 28 }}>{summary || "Tap coach again to generate a summary."}</div>
-              {summary && (
-                <button
-                  onClick={onSummaryRegenerate}
-                  aria-label="regenerate coach summary"
-                  title="regenerate"
-                  style={{
-                    position: "absolute",
-                    top: 10,
-                    right: 10,
-                    width: 26,
-                    height: 26,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "50%",
-                    background: "rgba(244,239,229,0.06)",
-                    color: "rgba(244,239,229,0.7)",
-                    border: "1px solid rgba(244,239,229,0.08)",
-                  }}
-                >
-                  <RefreshIcon size={13} />
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 }

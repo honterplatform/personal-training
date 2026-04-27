@@ -10,6 +10,7 @@ import authRoutes from "./routes/auth.js";
 import settingsRoutes from "./routes/settings.js";
 import entriesRoutes from "./routes/entries.js";
 import summaryRoutes from "./routes/summary.js";
+import coachRoutes from "./routes/coach.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
 app.use("/api/entries", requireAuth, entriesRoutes);
 app.use("/api/summary", requireAuth, summaryRoutes);
+app.use("/api/coach", requireAuth, coachRoutes);
 
 if (process.env.NODE_ENV === "production") {
   const clientDist = path.join(__dirname, "..", "client", "dist");
