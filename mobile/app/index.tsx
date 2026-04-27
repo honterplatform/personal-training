@@ -1,7 +1,8 @@
 import { ActivityIndicator, View } from "react-native";
 import { useStore } from "../src/lib/store";
 import { colors } from "../src/lib/theme";
-import LoginScreen from "../src/components/LoginScreen";
+import SignedOutScreen from "../src/components/SignedOutScreen";
+import OnboardingScreen from "../src/components/OnboardingScreen";
 import HomeScreen from "../src/components/HomeScreen";
 
 export default function Index() {
@@ -14,6 +15,7 @@ export default function Index() {
       </View>
     );
   }
-  if (authState === "unauthed") return <LoginScreen />;
+  if (authState === "signedOut") return <SignedOutScreen />;
+  if (authState === "needsOnboarding") return <OnboardingScreen />;
   return <HomeScreen />;
 }

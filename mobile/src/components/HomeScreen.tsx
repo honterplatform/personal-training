@@ -1,63 +1,79 @@
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "./Header";
-import WeeklyHero from "./WeeklyHero";
-import DatePicker from "./DatePicker";
-import Checklist from "./Checklist";
-import SettingsSheet from "./SettingsSheet";
-import CoachChat from "./CoachChat";
 import { useStore } from "../lib/store";
-import { colors } from "../lib/theme";
+import { colors, fonts } from "../lib/theme";
 
 export default function HomeScreen() {
-  const { selectedDate, setSelectedDate, weekEntries } = useStore();
-  const [showSettings, setShowSettings] = useState(false);
-  const [showCoach, setShowCoach] = useState(false);
-  const dayEntries = weekEntries.filter((e) => e.date === selectedDate);
-  const dayKcal = dayEntries.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0);
+  const { user, trackers, weekEntries, logout } = useStore();
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Header onOpenSettings={() => setShowSettings(true)} />
-          <View style={styles.heroPad}>
-            <WeeklyHero
-              selectedDate={selectedDate}
-              weekEntries={weekEntries}
-              onSelectDate={setSelectedDate}
-              onOpenCoach={() => setShowCoach(true)}
-            />
-          </View>
-          <DatePicker
-            value={selectedDate}
-            onChange={setSelectedDate}
-            dayKcal={dayKcal}
-          />
-          <View style={styles.checklistPad}>
-            <Checklist date={selectedDate} entries={dayEntries} />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Text style={styles.brand}>LOG</Text>
+        <Text style={styles.tag}>signed in — full UI coming next phase</Text>
 
-      <SettingsSheet visible={showSettings} onClose={() => setShowSettings(false)} />
-      <CoachChat visible={showCoach} onClose={() => setShowCoach(false)} />
+        <View style={styles.card}>
+          <Text style={styles.label}>account</Text>
+          <Text style={styles.line}>{user?.email}</Text>
+          {user?.displayName ? <Text style={styles.line}>{user.displayName}</Text> : null}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>demographics</Text>
+          <Text style={styles.line}>weight: {fmt(user?.demographics.weightKg)} kg</Text>
+          <Text style={styles.line}>height: {fmt(user?.demographics.heightCm)} cm</Text>
+          <Text style={styles.line}>sex: {user?.demographics.sex ?? "—"}</Text>
+          <Text style={styles.line}>age: {user?.demographics.age ?? "—"}</Text>
+          <Text style={styles.line}>fitness: {user?.demographics.fitnessLevel ?? "—"}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>this week</Text>
+          <Text style={styles.line}>trackers: {trackers.length}</Text>
+          <Text style={styles.line}>entries this week: {weekEntries.length}</Text>
+          <Text style={styles.line}>
+            kcal burned: {weekEntries.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0)}
+          </Text>
+        </View>
+
+        <Pressable onPress={logout} style={styles.logoutBtn}>
+          <Text style={styles.logoutText}>log out</Text>
+        </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
+function fmt(n?: number | null) {
+  if (n == null) return "—";
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cream },
-  flex: { flex: 1 },
-  scroll: { paddingBottom: 60 },
-  heroPad: { paddingHorizontal: 16, paddingTop: 14 },
-  checklistPad: { paddingHorizontal: 16 },
+  scroll: { padding: 20, paddingBottom: 60 },
+  brand: { fontFamily: fonts.serif, fontSize: 48, color: colors.accent, lineHeight: 50 },
+  tag: {
+    fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.2,
+    color: colors.mutedInk, textTransform: "uppercase",
+    marginTop: 8, marginBottom: 24,
+  },
+  card: {
+    backgroundColor: colors.card, borderRadius: 22, padding: 18,
+    marginBottom: 12, gap: 6,
+  },
+  label: {
+    fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.2,
+    color: colors.mutedInk, textTransform: "uppercase", marginBottom: 6,
+  },
+  line: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
+  logoutBtn: {
+    marginTop: 24, alignSelf: "center",
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 999, backgroundColor: colors.creamTint,
+  },
+  logoutText: {
+    fontFamily: fonts.mono, fontSize: 11,
+    color: colors.mutedInk, letterSpacing: 0.4,
+  },
 });
