@@ -15,7 +15,7 @@ export default function Checklist({
   date: string;
   entries: Entry[];
 }) {
-  const { settings, saveEntry } = useStore();
+  const { settings, saveEntry, deleteEntry } = useStore();
   const [openRow, setOpenRow] = useState<string | null>(null);
 
   const byActivity = Object.fromEntries(entries.map((e) => [e.activity, e])) as Record<
@@ -39,13 +39,8 @@ export default function Checklist({
               goal={goal}
               open={isOpen}
               onToggleOpen={onToggleOpen}
-              onToggleDone={() =>
-                saveEntry(date, a, {
-                  done: !entry?.done,
-                  proteinG: entry?.proteinG ?? null,
-                  notes: entry?.notes ?? "",
-                })
-              }
+              onSave={(patch) => saveEntry(date, a, patch)}
+              onDelete={() => deleteEntry(date, a)}
             />
           );
         }
@@ -57,7 +52,8 @@ export default function Checklist({
             entry={entry}
             open={isOpen}
             onToggleOpen={onToggleOpen}
-            onToggleDone={() => saveEntry(date, a, { done: !entry?.done })}
+            onSave={(patch) => saveEntry(date, a, patch)}
+            onDelete={() => deleteEntry(date, a)}
           />
         );
       })}

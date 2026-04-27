@@ -1,38 +1,54 @@
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, fonts } from "../lib/theme";
-import { CheckIcon, ChevDown, FlameIcon, StrengthIcon, SquashIcon, TkdIcon, WalkIcon } from "./Icons";
+import {
+  CheckIcon,
+  ChevDown,
+  FlameIcon,
+  StrengthIcon,
+  SquashIcon,
+  TkdIcon,
+  WalkIcon,
+} from "./Icons";
+import NumField from "./inputs/NumField";
+import RPEGrid from "./inputs/RPEGrid";
+import NotesField from "./inputs/NotesField";
+import StrengthReference from "./StrengthReference";
 import type { Entry } from "../lib/api";
 
 const META: Record<
   Exclude<Entry["activity"], "protein">,
-  { name: string; target: string; Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }> }
+  {
+    name: string;
+    target: string;
+    Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+    showsDistance: boolean;
+    durationPlaceholder: string;
+  }
 > = {
-  walk:      { name: "Walk",      target: "≥6 km",  Icon: WalkIcon },
-  squash:    { name: "Squash",    target: "60 min", Icon: SquashIcon },
-  taekwondo: { name: "Taekwondo", target: "60 min", Icon: TkdIcon },
-  strength:  { name: "Strength",  target: "8 moves", Icon: StrengthIcon },
+  walk:      { name: "Walk",      target: "≥6 km",   Icon: WalkIcon,     showsDistance: true,  durationPlaceholder: "60" },
+  squash:    { name: "Squash",    target: "60 min",  Icon: SquashIcon,   showsDistance: false, durationPlaceholder: "45" },
+  taekwondo: { name: "Taekwondo", target: "60 min",  Icon: TkdIcon,      showsDistance: false, durationPlaceholder: "60" },
+  strength:  { name: "Strength",  target: "8 moves", Icon: StrengthIcon, showsDistance: false, durationPlaceholder: "60" },
 };
 
-export default function ActivityRow({
-  activity,
-  entry,
-  open,
-  onToggleOpen,
-  onToggleDone,
-}: {
+type Props = {
   activity: Exclude<Entry["activity"], "protein">;
   entry?: Entry;
   open: boolean;
   onToggleOpen: () => void;
-  onToggleDone: () => void;
-}) {
+  onSave: (patch: Partial<Entry>) => void;
+  onDelete: () => void;
+};
+
+export default function ActivityRow({ activity, entry, open, onToggleOpen, onSave, onDelete }: Props) {
   const meta = META[activity];
   const done = !!entry?.done;
+  const Icon = meta.Icon;
   const needsDuration = done && !entry?.durationMin;
   const subtitle = needsDuration
     ? "add duration for kcal estimate"
     : describe(activity, entry) || meta.target;
-  const Icon = meta.Icon;
 
   return (
     <View style={styles.card}>
@@ -42,17 +58,24 @@ export default function ActivityRow({
       >
         <Pressable
           hitSlop={10}
-          onPress={(e) => { e.stopPropagation(); onToggleDone(); }}
+          onPress={(e) => {
+            e.stopPropagation();
+            const next = !done;
+            onSave({ done: next });
+            if (next && !entry?.durationMin && !open) onToggleOpen();
+          }}
           style={[styles.check, done && styles.checkDone]}
         >
-          {done && <CheckIcon size={15} color="#fff" strokeWidth={2.5} />}
+          {done ? <CheckIcon size={15} color="#fff" strokeWidth={2.5} /> : null}
         </Pressable>
         <View style={[styles.iconTile, done && { backgroundColor: "rgba(255,90,60,0.08)" }]}>
           <Icon size={20} color={done ? colors.accent : colors.ink} strokeWidth={1.8} />
         </View>
         <View style={styles.center}>
           <Text style={[styles.name, done && styles.nameDone]}>{meta.name}</Text>
-          <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
         </View>
         {entry?.caloriesBurned ? (
           <View style={styles.kcal}>
@@ -64,6 +87,93 @@ export default function ActivityRow({
           <ChevDown size={18} color="rgba(26,23,22,0.4)" strokeWidth={2} />
         </View>
       </Pressable>
+
+      {open ? (
+        <View style={styles.body}>
+          <Body activity={activity} entry={entry} onSave={onSave} onDelete={onDelete} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function Body({
+  activity,
+  entry,
+  onSave,
+  onDelete,
+}: {
+  activity: Exclude<Entry["activity"], "protein">;
+  entry?: Entry;
+  onSave: (patch: Partial<Entry>) => void;
+  onDelete: () => void;
+}) {
+  const meta = META[activity];
+  const [distance, setDistance] = useState(toStr(entry?.distanceKm));
+  const [duration, setDuration] = useState(toStr(entry?.durationMin));
+  const [rpe, setRpe] = useState<number | null>(entry?.rpe ?? null);
+  const [notes, setNotes] = useState(entry?.notes ?? "");
+
+  useEffect(() => {
+    setDistance(toStr(entry?.distanceKm));
+    setDuration(toStr(entry?.durationMin));
+    setRpe(entry?.rpe ?? null);
+    setNotes(entry?.notes ?? "");
+  }, [entry?._id, entry?.updatedAt]);
+
+  function commit(patch: Partial<Entry> = {}) {
+    onSave({
+      distanceKm: patch.distanceKm ?? toNum(distance),
+      durationMin: patch.durationMin ?? toNum(duration),
+      rpe: patch.rpe ?? rpe,
+      notes: patch.notes ?? notes,
+    });
+  }
+
+  return (
+    <View style={{ gap: 14 }}>
+      <View style={styles.fieldsRow}>
+        {meta.showsDistance ? (
+          <NumField
+            label="distance"
+            unit="km"
+            value={distance}
+            onChangeText={setDistance}
+            onCommit={() => commit()}
+            placeholder="6.0"
+          />
+        ) : null}
+        <NumField
+          label="duration"
+          unit="min"
+          value={duration}
+          onChangeText={setDuration}
+          onCommit={() => commit()}
+          placeholder={meta.durationPlaceholder}
+        />
+      </View>
+
+      <RPEGrid
+        value={rpe}
+        onChange={(v) => {
+          setRpe(v);
+          commit({ rpe: v });
+        }}
+      />
+
+      <NotesField
+        value={notes}
+        onChangeText={setNotes}
+        onCommit={() => commit()}
+      />
+
+      {activity === "strength" ? <StrengthReference /> : null}
+
+      {entry?._id ? (
+        <Pressable onPress={onDelete} hitSlop={6} style={styles.clear}>
+          <Text style={styles.clearText}>clear entry</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -77,6 +187,15 @@ function describe(id: Entry["activity"], entry?: Entry): string | null {
     return `${entry.durationMin} min${entry.rpe ? ` · rpe ${entry.rpe}` : ""}`;
   }
   return null;
+}
+
+function toStr(n: number | null | undefined): string {
+  return n == null ? "" : String(n);
+}
+function toNum(s: string): number | null {
+  if (s === "" || s == null) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 
 const styles = StyleSheet.create({
@@ -104,10 +223,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkDone: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
+  checkDone: { backgroundColor: colors.accent, borderColor: colors.accent },
   iconTile: {
     width: 38,
     height: 38,
@@ -145,4 +261,20 @@ const styles = StyleSheet.create({
   },
   kcalText: { fontFamily: fonts.mono, fontSize: 11, color: colors.accent },
   chev: { marginLeft: 4 },
+  body: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 18,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(26,23,22,0.06)",
+  },
+  fieldsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  clear: { alignSelf: "flex-start", marginTop: 4 },
+  clearText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: "rgba(26,23,22,0.45)",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
 });

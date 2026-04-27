@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "./Header";
 import DatePicker from "./DatePicker";
@@ -13,27 +13,34 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Header onOpenSettings={() => {}} />
-        <View style={styles.heroPlaceholder} />
-        <DatePicker
-          value={selectedDate}
-          onChange={setSelectedDate}
-          dayKcal={dayKcal}
-        />
-        <View style={styles.checklistPad}>
-          <Checklist date={selectedDate} entries={dayEntries} />
-        </View>
-      </ScrollView>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Header onOpenSettings={() => {}} />
+          <View style={styles.heroPlaceholder} />
+          <DatePicker
+            value={selectedDate}
+            onChange={setSelectedDate}
+            dayKcal={dayKcal}
+          />
+          <View style={styles.checklistPad}>
+            <Checklist date={selectedDate} entries={dayEntries} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cream },
+  flex: { flex: 1 },
   scroll: { paddingBottom: 60 },
   heroPlaceholder: { height: 8 },
   checklistPad: { paddingHorizontal: 16 },
