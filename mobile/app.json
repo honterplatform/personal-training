@@ -46,6 +46,9 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "clerkPublishableKey": "pk_test_c3R1bm5pbmctaW1wYWxhLTMzLmNsZXJrLmFjY291bnRzLmRldiQ"
     }
   }
 }
