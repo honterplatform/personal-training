@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.honterplatform.log",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.honterplatform.log",
@@ -39,7 +42,6 @@
           "backgroundColor": "#17140f"
         }
       ],
-      "@react-native-community/datetimepicker",
       "expo-secure-store",
       "expo-web-browser"
     ],
@@ -48,7 +50,11 @@
       "reactCompiler": true
     },
     "extra": {
-      "clerkPublishableKey": "pk_test_c3R1bm5pbmctaW1wYWxhLTMzLmNsZXJrLmFjY291bnRzLmRldiQ"
+      "clerkPublishableKey": "pk_test_c3R1bm5pbmctaW1wYWxhLTMzLmNsZXJrLmFjY291bnRzLmRldiQ",
+      "router": {},
+      "eas": {
+        "projectId": "4603e516-ae5f-470f-a6ae-26920479a655"
+      }
     }
   }
 }
