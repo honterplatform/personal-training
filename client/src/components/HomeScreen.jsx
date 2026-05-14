@@ -4,12 +4,11 @@ import Header from "./Header.jsx";
 import WeeklyHero from "./WeeklyHero.jsx";
 import DateSelector from "./DateSelector.jsx";
 import TrackerCard from "./TrackerCard.jsx";
+import SettingsSheet from "./SettingsSheet.jsx";
+import CoachChat from "./CoachChat.jsx";
 
 export default function HomeScreen() {
-  const {
-    trackers, weekEntries, selectedDate, setSelectedDate,
-    signOut,
-  } = useStore();
+  const { trackers, weekEntries, selectedDate, setSelectedDate } = useStore();
   const [showSettings, setShowSettings] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
 
@@ -51,32 +50,10 @@ export default function HomeScreen() {
             ))}
           </div>
         )}
-
-        {/* Temp until Phase 4 settings sheet */}
-        {showSettings ? (
-          <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
-            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-              <h2>settings coming next phase</h2>
-              <button className="entry-submit" onClick={signOut}>log out</button>
-              <button className="entry-cancel" onClick={() => setShowSettings(false)}>
-                close
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Temp until Phase 5 coach chat */}
-        {showCoach ? (
-          <div className="modal-backdrop" onClick={() => setShowCoach(false)}>
-            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-              <h2>coach chat coming next phase</h2>
-              <button className="entry-cancel" onClick={() => setShowCoach(false)}>
-                close
-              </button>
-            </div>
-          </div>
-        ) : null}
       </div>
+
+      {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
+      {showCoach && <CoachChat onClose={() => setShowCoach(false)} />}
     </div>
   );
 }
