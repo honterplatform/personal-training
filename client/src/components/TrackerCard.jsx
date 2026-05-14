@@ -35,7 +35,7 @@ export default function TrackerCard({ tracker, dayEntries, date }) {
                 {isWorkout ? (
                   <>
                     {e.durationMin ? `${e.durationMin} min` : "—"}
-                    {e.distanceKm ? ` · ${e.distanceKm} km` : ""}
+                    {e.distanceKm != null && e.distanceKm !== 0 ? ` · ${e.distanceKm} km` : ""}
                     {e.rpe ? ` · RPE ${e.rpe}` : ""}
                   </>
                 ) : (

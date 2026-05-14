@@ -1,7 +1,13 @@
 import { useState } from "react";
 
+const DISTANCE_RE = /\b(walk|run|jog|cycl|bik|hik|swim|row|ski|skat)/i;
+function tracksDistance(tracker) {
+  return tracker.kind === "workout" && DISTANCE_RE.test(tracker.name);
+}
+
 export default function LogEntryForm({ tracker, onCancel, onSubmit }) {
   const isWorkout = tracker.kind === "workout";
+  const showDistance = tracksDistance(tracker);
   const [durationMin, setDurationMin] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
   const [rpe, setRpe] = useState(null);
@@ -22,7 +28,9 @@ export default function LogEntryForm({ tracker, onCancel, onSubmit }) {
           throw new Error("duration required");
         }
         body.durationMin = Number(durationMin);
-        body.distanceKm = distanceKm === "" ? null : Number(distanceKm);
+        if (showDistance) {
+          body.distanceKm = distanceKm === "" ? null : Number(distanceKm);
+        }
         body.rpe = rpe;
       } else {
         if (!amount || Number(amount) <= 0) {
@@ -53,16 +61,18 @@ export default function LogEntryForm({ tracker, onCancel, onSubmit }) {
                 autoFocus
               />
             </Field>
-            <Field label="distance" unit="km" optional>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                value={distanceKm}
-                onChange={(e) => setDistanceKm(e.target.value)}
-                placeholder="—"
-              />
-            </Field>
+            {showDistance && (
+              <Field label="distance" unit="km" optional>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  value={distanceKm}
+                  onChange={(e) => setDistanceKm(e.target.value)}
+                  placeholder="—"
+                />
+              </Field>
+            )}
           </div>
 
           <div className="entry-rpe">
