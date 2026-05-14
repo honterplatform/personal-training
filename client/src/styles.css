@@ -259,22 +259,376 @@ input, textarea { font: inherit; }
   color: rgba(26,23,22,0.65);
 }
 
-/* ---------- Onboarding stub ---------- */
-.onboarding-stub {
+/* ---------- Onboarding ---------- */
+.onboarding-shell {
   min-height: 100vh;
   background: var(--cream);
+  padding: 40px 20px 60px;
+  display: flex;
+  justify-content: center;
+}
+.onboarding-inner {
+  width: 100%;
+  max-width: 560px;
+}
+.onboarding-progress {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.progress-dot {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(26,23,22,0.12);
+  transition: background 200ms;
+}
+.progress-dot.active { background: var(--accent); }
+.progress-dot.done { background: rgba(255,90,60,0.4); }
+
+.onboarding-step {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 24px;
 }
-.onboarding-stub p {
-  color: rgba(26,23,22,0.5);
+.onboarding-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.6px;
+  color: rgba(26,23,22,0.4);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.onboarding-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 40px;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: var(--ink);
+  margin: 0 0 10px;
+  font-weight: 400;
+}
+.onboarding-sub {
   font-size: 14px;
-  text-align: center;
-  max-width: 360px;
+  color: rgba(26,23,22,0.55);
   line-height: 1.5;
-  margin: 0;
+  margin: 0 0 24px;
+  max-width: 460px;
+}
+.onboarding-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.onboarding-error {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+  margin: 4px 0 12px;
+}
+.onboarding-next {
+  background: var(--ink-dark);
+  color: var(--cream);
+  border: none;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.onboarding-next:disabled { opacity: 0.5; cursor: not-allowed; }
+.onboarding-back {
+  background: transparent;
+  border: 1px solid rgba(26,23,22,0.1);
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(26,23,22,0.6);
+  letter-spacing: 0.4px;
+  cursor: pointer;
+}
+.onboarding-skip-note {
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  color: rgba(26,23,22,0.4);
+  text-transform: uppercase;
+}
+.ob-step-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+/* Fields */
+.ob-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ob-field-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(26,23,22,0.5);
+}
+.ob-field-input {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.07);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.ob-field-input input {
+  flex: 1;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+  border: none;
+  outline: none;
+  background: transparent;
+  min-width: 0;
+  width: 100%;
+}
+.ob-field-unit {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(26,23,22,0.45);
+}
+
+/* Pills */
+.ob-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ob-pills-hint {
+  font-size: 11px;
+  color: rgba(26,23,22,0.5);
+  line-height: 1.45;
+}
+.ob-pills-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ob-pill {
+  flex: 1;
+  min-width: 80px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.06);
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 13px;
+  color: rgba(26,23,22,0.7);
+  cursor: pointer;
+  text-align: center;
+}
+.ob-pill.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* Sections for Step 2 */
+.ob-section {
+  margin-bottom: 22px;
+}
+.ob-section-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(26,23,22,0.5);
+  margin-bottom: 10px;
+}
+.ob-suggest-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ob-suggest {
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.07);
+  border-radius: 999px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ob-suggest:hover { border-color: rgba(26,23,22,0.15); }
+.ob-suggest.picked {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.ob-suggest-check {
+  font-size: 11px;
+}
+
+/* Custom add row */
+.ob-custom-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: stretch;
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.07);
+  border-radius: 14px;
+  padding: 8px;
+}
+.ob-custom-toggle {
+  display: flex;
+  gap: 4px;
+  background: rgba(26,23,22,0.04);
+  border-radius: 10px;
+  padding: 3px;
+}
+.ob-mini-pill {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(26,23,22,0.6);
+  cursor: pointer;
+}
+.ob-mini-pill.active {
+  background: var(--ink-dark);
+  color: var(--cream);
+}
+.ob-custom-input {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 12px;
+  border: 1px solid rgba(26,23,22,0.07);
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 14px;
+  background: var(--cream);
+  outline: none;
+}
+.ob-custom-input.narrow { flex: 0 0 90px; min-width: 0; }
+.ob-custom-add {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--ink-dark);
+  color: var(--cream);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ob-custom-add:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Picks list */
+.ob-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ob-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.07);
+  border-radius: 14px;
+  padding: 12px 14px;
+  flex-wrap: wrap;
+}
+.ob-pick-name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  min-width: 140px;
+}
+.ob-pick-kind {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(26,23,22,0.06);
+  color: rgba(26,23,22,0.55);
+}
+.ob-pick-kind.workout { background: rgba(255,90,60,0.1); color: var(--accent); }
+.ob-pick-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ob-pick-target input {
+  width: 72px;
+  padding: 8px 10px;
+  border: 1px solid rgba(26,23,22,0.08);
+  border-radius: 10px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  text-align: right;
+  background: var(--cream);
+  outline: none;
+}
+.ob-pick-target-unit {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(26,23,22,0.5);
+  min-width: 32px;
+}
+.ob-pick-unit {
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid rgba(26,23,22,0.08);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--cream);
+  outline: none;
+}
+.ob-pick-remove {
+  background: rgba(26,23,22,0.06);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: rgba(26,23,22,0.6);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ob-pick-remove:hover { background: var(--accent); color: #fff; }
+
+@media (max-width: 520px) {
+  .onboarding-title { font-size: 32px; }
+  .ob-custom-input.narrow { flex: 1 0 80px; }
+  .ob-pick-row { gap: 8px; }
 }
