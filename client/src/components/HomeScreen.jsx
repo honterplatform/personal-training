@@ -1,49 +1,82 @@
+import { useState } from "react";
 import { useStore } from "../lib/store.jsx";
+import Header from "./Header.jsx";
+import WeeklyHero from "./WeeklyHero.jsx";
+import DateSelector from "./DateSelector.jsx";
+import TrackerCard from "./TrackerCard.jsx";
 
 export default function HomeScreen() {
-  const { user, trackers, weekEntries, signOut } = useStore();
+  const {
+    trackers, weekEntries, selectedDate, setSelectedDate,
+    signOut,
+  } = useStore();
+  const [showSettings, setShowSettings] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
+
+  const dayEntries = weekEntries.filter((e) => e.date === selectedDate);
+  const dayKcal = dayEntries.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0);
 
   return (
     <div className="app-shell">
       <div className="shell-inner">
-        <div className="placeholder-home">
-          <div className="brand-mark accent">LOG</div>
-          <div className="placeholder-tag">signed in · full UI coming next phase</div>
+        <Header onOpenSettings={() => setShowSettings(true)} />
 
-          <section className="placeholder-card">
-            <div className="placeholder-label">account</div>
-            <div>{user?.email}</div>
-            {user?.displayName ? <div>{user.displayName}</div> : null}
-          </section>
+        <WeeklyHero
+          trackers={trackers}
+          weekEntries={weekEntries}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          onOpenCoach={() => setShowCoach(true)}
+        />
 
-          <section className="placeholder-card">
-            <div className="placeholder-label">demographics</div>
-            <div>weight: {fmt(user?.demographics?.weightKg)} kg</div>
-            <div>height: {fmt(user?.demographics?.heightCm)} cm</div>
-            <div>sex: {user?.demographics?.sex ?? "—"}</div>
-            <div>age: {user?.demographics?.age ?? "—"}</div>
-            <div>fitness: {user?.demographics?.fitnessLevel ?? "—"}</div>
-          </section>
+        <DateSelector
+          value={selectedDate}
+          onChange={setSelectedDate}
+          dayKcal={dayKcal}
+        />
 
-          <section className="placeholder-card">
-            <div className="placeholder-label">this week</div>
-            <div>trackers: {trackers.length}</div>
-            <div>entries this week: {weekEntries.length}</div>
-            <div>
-              kcal burned: {weekEntries.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0)}
+        {trackers.length === 0 ? (
+          <div className="empty-trackers">
+            No trackers yet. Add some in settings.
+          </div>
+        ) : (
+          <div className="trackers-list">
+            {trackers.map((t) => (
+              <TrackerCard
+                key={t._id}
+                tracker={t}
+                dayEntries={dayEntries}
+                date={selectedDate}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Temp until Phase 4 settings sheet */}
+        {showSettings ? (
+          <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h2>settings coming next phase</h2>
+              <button className="entry-submit" onClick={signOut}>log out</button>
+              <button className="entry-cancel" onClick={() => setShowSettings(false)}>
+                close
+              </button>
             </div>
-          </section>
+          </div>
+        ) : null}
 
-          <button onClick={signOut} className="logout-btn">
-            log out
-          </button>
-        </div>
+        {/* Temp until Phase 5 coach chat */}
+        {showCoach ? (
+          <div className="modal-backdrop" onClick={() => setShowCoach(false)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h2>coach chat coming next phase</h2>
+              <button className="entry-cancel" onClick={() => setShowCoach(false)}>
+                close
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
-}
-
-function fmt(n) {
-  if (n == null) return "—";
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
