@@ -13,19 +13,19 @@ const DemographicsSchema = new mongoose.Schema(
 
 const UserSchema = new mongoose.Schema(
   {
-    // _id is the Clerk user id (string, e.g. "user_2abc...")
-    _id: { type: String, required: true },
-    email: { type: String, default: "", lowercase: true, trim: true, index: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+    passwordHash: { type: String, required: true },
     displayName: { type: String, default: "" },
     demographics: { type: DemographicsSchema, default: () => ({}) },
     onboardedAt: { type: Date, default: null },
     timezone: { type: String, default: "America/Bogota" },
   },
-  { timestamps: true, _id: false }
+  { timestamps: true }
 );
 
 UserSchema.method("toSafe", function () {
   const o = this.toObject();
+  delete o.passwordHash;
   return o;
 });
 

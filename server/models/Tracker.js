@@ -11,7 +11,7 @@ const TargetSchema = new mongoose.Schema(
 
 const TrackerSchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     kind: { type: String, enum: ["workout", "intake"], required: true },
     name: { type: String, required: true, trim: true },
     unit: { type: String, default: "" },

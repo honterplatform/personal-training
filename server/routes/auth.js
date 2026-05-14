@@ -1,19 +1,62 @@
 import express from "express";
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Entry from "../models/Entry.js";
 import Tracker from "../models/Tracker.js";
 import Conversation from "../models/Conversation.js";
-import { requireAuth, clerk } from "../auth.js";
+import { issueSession, clearSession, requireAuth } from "../auth.js";
 
 const router = express.Router();
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PW_MIN = 8;
+
+router.post("/signup", async (req, res) => {
+  const email = (req.body?.email || "").trim().toLowerCase();
+  const password = req.body?.password || "";
+  const displayName = (req.body?.displayName || "").trim().slice(0, 80);
+
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "invalid email" });
+  if (password.length < PW_MIN)
+    return res.status(400).json({ error: `password must be at least ${PW_MIN} characters` });
+
+  const existing = await User.findOne({ email });
+  if (existing) return res.status(409).json({ error: "email already in use" });
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const user = await User.create({ email, passwordHash, displayName });
+  issueSession(res, user._id.toString());
+  res.status(201).json({ user: user.toSafe() });
+});
+
+router.post("/login", async (req, res) => {
+  const email = (req.body?.email || "").trim().toLowerCase();
+  const password = req.body?.password || "";
+  if (!email || !password) return res.status(400).json({ error: "missing credentials" });
+
+  const user = await User.findOne({ email });
+  if (!user) return res.status(401).json({ error: "invalid credentials" });
+  const ok = await bcrypt.compare(password, user.passwordHash);
+  if (!ok) return res.status(401).json({ error: "invalid credentials" });
+
+  issueSession(res, user._id.toString());
+  res.json({ user: user.toSafe() });
+});
+
+router.post("/logout", (req, res) => {
+  clearSession(res);
+  res.json({ ok: true });
+});
 
 router.get("/me", requireAuth, async (req, res) => {
-  res.json({ user: req.user.toSafe() });
+  const user = await User.findById(req.userId);
+  if (!user) return res.status(401).json({ error: "unauthorized" });
+  res.json({ user: user.toSafe() });
 });
 
 router.put("/me", requireAuth, async (req, res) => {
+  const user = await User.findById(req.userId);
+  if (!user) return res.status(401).json({ error: "unauthorized" });
   const { displayName, demographics, onboardedAt } = req.body || {};
-  const user = req.user;
 
   if (typeof displayName === "string") user.displayName = displayName.trim().slice(0, 80);
   if (demographics && typeof demographics === "object") {
@@ -32,6 +75,8 @@ router.put("/me", requireAuth, async (req, res) => {
 
 router.get("/me/export", requireAuth, async (req, res) => {
   const userId = req.userId;
+  const user = await User.findById(userId);
+  if (!user) return res.status(401).json({ error: "unauthorized" });
   const [trackers, entries, conversation] = await Promise.all([
     Tracker.find({ userId }).lean(),
     Entry.find({ userId }).lean(),
@@ -43,7 +88,7 @@ router.get("/me/export", requireAuth, async (req, res) => {
     JSON.stringify(
       {
         exportedAt: new Date().toISOString(),
-        user: req.user.toSafe(),
+        user: user.toSafe(),
         trackers,
         entries,
         conversation: conversation ? { messages: conversation.messages } : null,
@@ -62,12 +107,7 @@ router.delete("/me", requireAuth, async (req, res) => {
     Conversation.deleteMany({ userId }),
     User.deleteOne({ _id: userId }),
   ]);
-  // Also delete the Clerk user so they can sign up again with the same email
-  try {
-    await clerk().users.deleteUser(userId);
-  } catch (err) {
-    console.warn("[clerk] delete user failed:", err.message);
-  }
+  clearSession(res);
   res.json({ ok: true });
 });
 

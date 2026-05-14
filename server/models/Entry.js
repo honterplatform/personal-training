@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const EntrySchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     trackerId: { type: mongoose.Schema.Types.ObjectId, ref: "Tracker", required: true, index: true },
     date: { type: String, required: true },
 
