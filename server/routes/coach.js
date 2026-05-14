@@ -10,9 +10,12 @@ const router = express.Router();
 const HISTORY_TURNS = 16;
 
 async function loadConversation(userId) {
-  let c = await Conversation.findOne({ userId });
-  if (!c) c = await Conversation.create({ userId, messages: [] });
-  return c;
+  // Atomic upsert — no race even under concurrent requests.
+  return await Conversation.findOneAndUpdate(
+    { userId },
+    { $setOnInsert: { userId, messages: [] } },
+    { new: true, upsert: true }
+  );
 }
 
 async function buildContext(userId, dateInput) {

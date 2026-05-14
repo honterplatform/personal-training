@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "express-async-errors";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -35,6 +36,20 @@ if (process.env.NODE_ENV === "production") {
     res.sendFile(path.join(clientDist, "index.html"));
   });
 }
+
+// Global error handler — keeps the process alive when a route throws.
+app.use((err, req, res, next) => {
+  console.error(`[error] ${req.method} ${req.path}:`, err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: err?.message || "internal server error" });
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err);
+});
+process.on("unhandledRejection", (err) => {
+  console.error("[unhandledRejection]", err);
+});
 
 const PORT = process.env.PORT || 4000;
 
