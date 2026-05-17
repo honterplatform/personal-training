@@ -11,6 +11,8 @@ import authRoutes from "./routes/auth.js";
 import trackerRoutes from "./routes/trackers.js";
 import entryRoutes from "./routes/entries.js";
 import coachRoutes from "./routes/coach.js";
+import weightRoutes from "./routes/weights.js";
+import nutritionRoutes from "./routes/nutrition.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -27,6 +29,8 @@ app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/trackers", requireAuth, trackerRoutes);
 app.use("/api/entries", requireAuth, entryRoutes);
+app.use("/api/weights", requireAuth, weightRoutes);
+app.use("/api/nutrition", requireAuth, nutritionRoutes);
 app.use("/api/coach", requireAuth, coachRoutes);
 
 if (process.env.NODE_ENV === "production") {

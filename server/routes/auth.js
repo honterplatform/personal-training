@@ -4,6 +4,8 @@ import User from "../models/User.js";
 import Entry from "../models/Entry.js";
 import Tracker from "../models/Tracker.js";
 import Conversation from "../models/Conversation.js";
+import Weight from "../models/Weight.js";
+import NutritionEntry from "../models/NutritionEntry.js";
 import { issueSession, clearSession, requireAuth } from "../auth.js";
 
 const router = express.Router();
@@ -53,12 +55,16 @@ router.get("/me", requireAuth, async (req, res) => {
   res.json({ user: user.toSafe() });
 });
 
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const MACRO_KEYS = ["kcal", "proteinG", "carbsG", "fatG"];
+
 router.put("/me", requireAuth, async (req, res) => {
   const user = await User.findById(req.userId);
   if (!user) return res.status(401).json({ error: "unauthorized" });
-  const { displayName, demographics, onboardedAt } = req.body || {};
+  const { displayName, demographics, onboardedAt, weeklySchedule, targets } = req.body || {};
 
   if (typeof displayName === "string") user.displayName = displayName.trim().slice(0, 80);
+
   if (demographics && typeof demographics === "object") {
     const d = user.demographics || {};
     if ("sex" in demographics) d.sex = demographics.sex || null;
@@ -68,6 +74,32 @@ router.put("/me", requireAuth, async (req, res) => {
     if ("fitnessLevel" in demographics) d.fitnessLevel = demographics.fitnessLevel || null;
     user.demographics = d;
   }
+
+  if (weeklySchedule && typeof weeklySchedule === "object") {
+    const s = user.weeklySchedule || {};
+    for (const day of WEEKDAYS) {
+      if (day in weeklySchedule) {
+        const v = weeklySchedule[day];
+        s[day] = v == null || v === "" ? null : String(v).trim().slice(0, 32) || null;
+      }
+    }
+    user.weeklySchedule = s;
+  }
+
+  if (targets && typeof targets === "object") {
+    const t = user.targets || {};
+    for (const dayType of ["trainingDay", "restDay"]) {
+      if (targets[dayType] && typeof targets[dayType] === "object") {
+        const cur = t[dayType] || {};
+        for (const k of MACRO_KEYS) {
+          if (k in targets[dayType]) cur[k] = numOrNull(targets[dayType][k]);
+        }
+        t[dayType] = cur;
+      }
+    }
+    user.targets = t;
+  }
+
   if (onboardedAt === true && !user.onboardedAt) user.onboardedAt = new Date();
   await user.save();
   res.json({ user: user.toSafe() });
@@ -77,10 +109,12 @@ router.get("/me/export", requireAuth, async (req, res) => {
   const userId = req.userId;
   const user = await User.findById(userId);
   if (!user) return res.status(401).json({ error: "unauthorized" });
-  const [trackers, entries, conversation] = await Promise.all([
+  const [trackers, entries, conversation, weights, nutrition] = await Promise.all([
     Tracker.find({ userId }).lean(),
     Entry.find({ userId }).lean(),
     Conversation.findOne({ userId }).lean(),
+    Weight.find({ userId }).lean(),
+    NutritionEntry.find({ userId }).lean(),
   ]);
   res.setHeader("Content-Disposition", `attachment; filename=log-export-${userId}.json`);
   res.setHeader("Content-Type", "application/json");
@@ -91,6 +125,8 @@ router.get("/me/export", requireAuth, async (req, res) => {
         user: user.toSafe(),
         trackers,
         entries,
+        weights,
+        nutrition,
         conversation: conversation ? { messages: conversation.messages } : null,
       },
       null,
@@ -105,6 +141,8 @@ router.delete("/me", requireAuth, async (req, res) => {
     Entry.deleteMany({ userId }),
     Tracker.deleteMany({ userId }),
     Conversation.deleteMany({ userId }),
+    Weight.deleteMany({ userId }),
+    NutritionEntry.deleteMany({ userId }),
     User.deleteOne({ _id: userId }),
   ]);
   clearSession(res);
