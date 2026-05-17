@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --watch index.js",
     "start": "node index.js",
-    "seed": "node seed.js"
+    "migrate": "node migrations/001-targets-and-schedule.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",

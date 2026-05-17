@@ -18,7 +18,6 @@ const EntrySchema = new mongoose.Schema(
 
     // Common
     notes: { type: String, default: "" },
-    done: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
