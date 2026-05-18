@@ -1809,3 +1809,292 @@ input, textarea { font: inherit; }
   font-size: 11px;
   color: var(--color-danger);
 }
+
+/* ---------- NutritionCard ---------- */
+.nutrition-card {
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.07);
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nutrition-card.collapsed {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+}
+.nutrition-card.collapsed:hover {
+  border-color: rgba(26,23,22,0.18);
+}
+.nutrition-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nutrition-card-collapse {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(26,23,22,0.08);
+  color: rgba(26,23,22,0.5);
+  cursor: pointer;
+  font-size: 14px;
+}
+.nutrition-card-empty-line {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(26,23,22,0.5);
+}
+.nutrition-card-cta {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--color-accent);
+  letter-spacing: 0.1px;
+}
+.nutrition-card-add-mini {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--cream);
+  border: 1px dashed rgba(26,23,22,0.2);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(26,23,22,0.6);
+  cursor: pointer;
+}
+
+/* Day-type chip — accent-styled but small */
+.day-type-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.day-type-chip.training {
+  background: rgba(255,90,60,0.1);
+  color: var(--color-accent);
+  border-color: rgba(255,90,60,0.18);
+}
+.day-type-chip.rest {
+  background: rgba(26,23,22,0.05);
+  color: rgba(26,23,22,0.55);
+  border-color: rgba(26,23,22,0.1);
+}
+
+/* Kcal headline */
+.nutrition-kcal {
+  font-family: var(--serif);
+  font-style: italic;
+  letter-spacing: -1px;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.nutrition-kcal-actual {
+  font-size: 40px;
+  color: var(--ink);
+}
+.nutrition-kcal-sep {
+  font-size: 28px;
+  color: rgba(26,23,22,0.3);
+  padding: 0 4px;
+}
+.nutrition-kcal-target {
+  font-size: 28px;
+  color: rgba(26,23,22,0.45);
+}
+.nutrition-kcal-unit {
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 12px;
+  color: rgba(26,23,22,0.45);
+  letter-spacing: 0.2px;
+  margin-left: 8px;
+}
+
+/* Macro bars */
+.macro-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.macro-bar.large {
+  /* Protein gets a touch more breathing room */
+  margin-top: 2px;
+}
+.macro-bar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.macro-bar-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(26,23,22,0.55);
+}
+.macro-bar-numbers {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(26,23,22,0.7);
+}
+.macro-bar-actual { font-weight: 600; }
+.macro-bar-actual.positive { color: var(--color-positive); }
+.macro-bar-actual.behind   { color: var(--color-danger); }
+.macro-bar-sep { color: rgba(26,23,22,0.3); }
+.macro-bar-target { color: rgba(26,23,22,0.5); }
+.macro-bar-over {
+  color: var(--color-danger);
+  margin-left: 4px;
+}
+.macro-bar-track {
+  height: 6px;
+  background: rgba(26,23,22,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.macro-bar.large .macro-bar-track {
+  height: 12px;
+}
+.macro-bar-fill {
+  height: 100%;
+  background: rgba(26,23,22,0.45);
+  transition: width 200ms;
+  border-radius: 999px;
+}
+.macro-bar-fill.positive { background: var(--color-positive); }
+.macro-bar-fill.behind   { background: var(--color-danger); }
+.macro-bar-fill.neutral  { background: rgba(26,23,22,0.4); }
+
+/* Meal list */
+.meal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.meal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--cream);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.meal-slot {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(26,23,22,0.5);
+  min-width: 86px;
+}
+.meal-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.meal-notes {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink);
+}
+.meal-numbers {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(26,23,22,0.55);
+}
+.meal-del {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: rgba(26,23,22,0.4);
+  font-size: 11px;
+  cursor: pointer;
+}
+.meal-del:hover { background: rgba(229,72,77,0.1); color: var(--color-danger); }
+
+.nutrition-card-add {
+  align-self: flex-start;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--cream);
+  border: 1px dashed rgba(26,23,22,0.2);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(26,23,22,0.65);
+  letter-spacing: 0.3px;
+  cursor: pointer;
+}
+.nutrition-card-add:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* meal form */
+.meal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 0 4px;
+  border-top: 1px dashed rgba(26,23,22,0.1);
+}
+.meal-form-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.meal-form-slot select {
+  padding: 10px 12px;
+  border: 1px solid rgba(26,23,22,0.08);
+  border-radius: 12px;
+  background: var(--cream);
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+}
+.meal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 520px) {
+  .meal-form-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.meal-form-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.meal-form-notes textarea {
+  padding: 10px 12px;
+  background: var(--cream);
+  border: 1px solid rgba(26,23,22,0.08);
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink);
+  resize: vertical;
+  outline: none;
+}

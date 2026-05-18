@@ -4,6 +4,7 @@ import Header from "./Header.jsx";
 import WeeklyHero from "./WeeklyHero.jsx";
 import DateSelector from "./DateSelector.jsx";
 import WeightCard from "./WeightCard.jsx";
+import NutritionCard from "./NutritionCard.jsx";
 import TrackerCard from "./TrackerCard.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import CoachChat from "./CoachChat.jsx";
@@ -36,6 +37,7 @@ export default function HomeScreen() {
         />
 
         <WeightCard />
+        <NutritionCard />
 
         {trackers.length === 0 ? (
           <div className="empty-trackers">
