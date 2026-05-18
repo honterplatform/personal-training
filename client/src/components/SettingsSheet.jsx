@@ -23,6 +23,8 @@ export default function SettingsSheet({ onClose }) {
         <div className="settings-body">
           <ProfileSection user={user} updateProfile={updateProfile} />
           <DemographicsSection user={user} updateProfile={updateProfile} />
+          <ScheduleSection user={user} updateProfile={updateProfile} />
+          <TargetsSection user={user} updateProfile={updateProfile} />
           <TrackersSection
             trackers={trackers}
             createTracker={createTracker}
@@ -209,6 +211,9 @@ function TrackersSection({ trackers, createTracker, updateTracker, deleteTracker
   );
 }
 
+const MACRO_TRACKER_RE = /^(protein|carbs?|fat|calories?|kcal)$/i;
+const DISMISSED_BANNER_KEY = "log:dismissedMacroBanner";
+
 function TrackerRow({ tracker, onUpdate, onDelete }) {
   const [name, setName] = useState(tracker.name);
   const [unit, setUnit] = useState(tracker.unit || "");
@@ -216,6 +221,23 @@ function TrackerRow({ tracker, onUpdate, onDelete }) {
     tracker.target?.value != null ? String(tracker.target.value) : ""
   );
   const [pinned, setPinned] = useState(tracker.pinned);
+
+  // Phase 1 deprecation: macro tracking moved to the Nutrition card.
+  const isLegacyMacro = MACRO_TRACKER_RE.test(tracker.name || "");
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    try {
+      const ids = JSON.parse(localStorage.getItem(DISMISSED_BANNER_KEY) || "[]");
+      return Array.isArray(ids) && ids.includes(tracker._id);
+    } catch { return false; }
+  });
+  function dismissBanner() {
+    try {
+      const ids = JSON.parse(localStorage.getItem(DISMISSED_BANNER_KEY) || "[]");
+      const next = Array.isArray(ids) ? Array.from(new Set([...ids, tracker._id])) : [tracker._id];
+      localStorage.setItem(DISMISSED_BANNER_KEY, JSON.stringify(next));
+    } catch {}
+    setBannerDismissed(true);
+  }
 
   const isIntake = tracker.kind === "intake";
 
@@ -284,6 +306,29 @@ function TrackerRow({ tracker, onUpdate, onDelete }) {
           </label>
         )}
       </div>
+      {isLegacyMacro && !bannerDismissed && tracker.archivedAt == null && (
+        <div className="settings-tracker-banner">
+          <span>
+            Macro tracking moved to the new Nutrition card. Archive this tracker?
+          </span>
+          <div className="settings-tracker-banner-actions">
+            <button
+              className="entry-cancel"
+              onClick={() => { dismissBanner(); }}
+            >
+              keep
+            </button>
+            <button
+              className="entry-submit"
+              onClick={() => {
+                onUpdate({ archivedAt: new Date().toISOString() });
+              }}
+            >
+              archive
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -364,6 +409,186 @@ function NewTrackerForm({ onCancel, onSubmit }) {
       </div>
     </form>
   );
+}
+
+/* ---------- Weekly schedule ---------- */
+const WEEKDAYS = [
+  { id: "mon", label: "Mon" },
+  { id: "tue", label: "Tue" },
+  { id: "wed", label: "Wed" },
+  { id: "thu", label: "Thu" },
+  { id: "fri", label: "Fri" },
+  { id: "sat", label: "Sat" },
+  { id: "sun", label: "Sun" },
+];
+
+function ScheduleSection({ user, updateProfile }) {
+  const [draft, setDraft] = useState(() => normalizeSchedule(user?.weeklySchedule));
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDraft(normalizeSchedule(user?.weeklySchedule));
+  }, [user?._id]);
+
+  async function commit(next) {
+    setDraft(next);
+    if (saving) return;
+    setSaving(true);
+    try {
+      await updateProfile({ weeklySchedule: next });
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Section title="Weekly schedule">
+      <p className="settings-section-hint">
+        Pick what you train each day. Days marked Rest use rest-day targets.
+      </p>
+      <div className="settings-schedule">
+        {WEEKDAYS.map((d) => (
+          <div key={d.id} className="settings-schedule-row">
+            <span className="settings-schedule-day">{d.label}</span>
+            <input
+              type="text"
+              className="settings-schedule-input"
+              placeholder="rest"
+              value={draft[d.id] ?? ""}
+              onChange={(e) =>
+                setDraft({ ...draft, [d.id]: e.target.value })
+              }
+              onBlur={() => commit({ ...draft, [d.id]: draft[d.id]?.trim() || null })}
+            />
+          </div>
+        ))}
+      </div>
+      {savedFlash && <div className="settings-saved-flash">saved</div>}
+    </Section>
+  );
+}
+
+function normalizeSchedule(s) {
+  const o = {};
+  for (const d of WEEKDAYS) o[d.id] = s?.[d.id] ?? null;
+  return o;
+}
+
+/* ---------- Targets ---------- */
+function TargetsSection({ user, updateProfile }) {
+  const [draft, setDraft] = useState(() => ({
+    trainingDay: { ...defaultMacro(user?.targets?.trainingDay) },
+    restDay:     { ...defaultMacro(user?.targets?.restDay) },
+  }));
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDraft({
+      trainingDay: defaultMacro(user?.targets?.trainingDay),
+      restDay:     defaultMacro(user?.targets?.restDay),
+    });
+  }, [user?._id]);
+
+  async function commit(next) {
+    setDraft(next);
+    if (saving) return;
+    setSaving(true);
+    try {
+      await updateProfile({
+        targets: {
+          trainingDay: toNumbers(next.trainingDay),
+          restDay:     toNumbers(next.restDay),
+        },
+      });
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function setField(dayType, key, value) {
+    setDraft((prev) => ({ ...prev, [dayType]: { ...prev[dayType], [key]: value } }));
+  }
+
+  function blurCommit() {
+    commit(draft);
+  }
+
+  return (
+    <Section title="Calorie + macro targets">
+      <p className="settings-section-hint">
+        Used by the Nutrition card. Different day types let you cycle macros
+        (e.g. higher carbs on training days).
+      </p>
+
+      <TargetGroup
+        label="Training day"
+        values={draft.trainingDay}
+        setField={(k, v) => setField("trainingDay", k, v)}
+        onBlur={blurCommit}
+      />
+      <TargetGroup
+        label="Rest day"
+        values={draft.restDay}
+        setField={(k, v) => setField("restDay", k, v)}
+        onBlur={blurCommit}
+      />
+
+      {savedFlash && <div className="settings-saved-flash">saved</div>}
+    </Section>
+  );
+}
+
+function TargetGroup({ label, values, setField, onBlur }) {
+  return (
+    <div className="settings-target-group">
+      <div className="settings-target-label">{label}</div>
+      <div className="settings-target-grid">
+        <TargetCell name="kcal"     value={values.kcal}     setValue={(v) => setField("kcal", v)}     onBlur={onBlur} />
+        <TargetCell name="protein"  unit="g" value={values.proteinG} setValue={(v) => setField("proteinG", v)} onBlur={onBlur} />
+        <TargetCell name="carbs"    unit="g" value={values.carbsG}   setValue={(v) => setField("carbsG", v)}   onBlur={onBlur} />
+        <TargetCell name="fat"      unit="g" value={values.fatG}     setValue={(v) => setField("fatG", v)}     onBlur={onBlur} />
+      </div>
+    </div>
+  );
+}
+
+function TargetCell({ name, unit, value, setValue, onBlur }) {
+  return (
+    <label className="settings-target-cell">
+      <span className="ob-field-label small">{name}</span>
+      <div className="settings-target-input">
+        <input
+          type="number"
+          inputMode="numeric"
+          value={value ?? ""}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={onBlur}
+          placeholder="—"
+        />
+        {unit && <span className="settings-target-unit">{unit}</span>}
+      </div>
+    </label>
+  );
+}
+
+function defaultMacro(m) {
+  return {
+    kcal:     m?.kcal     != null ? String(m.kcal)     : "",
+    proteinG: m?.proteinG != null ? String(m.proteinG) : "",
+    carbsG:   m?.carbsG   != null ? String(m.carbsG)   : "",
+    fatG:     m?.fatG     != null ? String(m.fatG)     : "",
+  };
+}
+
+function toNumbers(m) {
+  const n = (v) => (v === "" || v == null ? null : Number(v));
+  return { kcal: n(m.kcal), proteinG: n(m.proteinG), carbsG: n(m.carbsG), fatG: n(m.fatG) };
 }
 
 /* ---------- Account ---------- */
