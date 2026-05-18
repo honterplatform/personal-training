@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, APIError } from "./api.js";
-import { todayISO, weekRange, isoToDate } from "./dates.js";
+import { todayISO, weekRange } from "./dates.js";
 
 const StoreContext = createContext(null);
 
@@ -9,29 +9,13 @@ function sortTrackers(a, b) {
   return a.order - b.order;
 }
 
-// Trailing window of N days ending at the selected date.
-function trailingWindow(iso, days) {
-  const end = isoToDate(iso);
-  const start = new Date(end.getTime() - (days - 1) * 86_400_000);
-  const fmt = (d) => {
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(d.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${dd}`;
-  };
-  return { start: fmt(start), end: fmt(end) };
-}
-
 export function StoreProvider({ children }) {
   const [authState, setAuthState] = useState("loading");
   const [user, setUser] = useState(null);
   const [trackers, setTrackers] = useState([]);
   const [weekEntries, setWeekEntries] = useState([]);
-  const [nutrition, setNutrition] = useState([]);    // current week's meals
-  const [weights, setWeights] = useState([]);        // last 30 days
-  const [templates, setTemplates] = useState([]);    // all of the user's meal templates
-  const [measurements, setMeasurements] = useState([]); // trailing 90 days
-  const [photos, setPhotos] = useState([]);          // trailing 90 days
+  const [nutrition, setNutrition] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [insights, setInsights] = useState({ current: [], patterns: [], warnings: [] });
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [error, setError] = useState(null);
@@ -42,10 +26,7 @@ export function StoreProvider({ children }) {
       setTrackers([]);
       setWeekEntries([]);
       setNutrition([]);
-      setWeights([]);
       setTemplates([]);
-      setMeasurements([]);
-      setPhotos([]);
       setInsights({ current: [], patterns: [], warnings: [] });
       setAuthState("signedOut");
       return;
@@ -87,16 +68,6 @@ export function StoreProvider({ children }) {
     }
   }, [selectedDate, settle]);
 
-  const refreshWeights = useCallback(async () => {
-    try {
-      const { start, end } = trailingWindow(selectedDate, 30);
-      setWeights(await api.listWeights(start, end));
-    } catch (e) {
-      if (e instanceof APIError && e.status === 401) settle(null);
-      else if (e instanceof Error) setError(e.message);
-    }
-  }, [selectedDate, settle]);
-
   const refreshTemplates = useCallback(async () => {
     try { setTemplates(await api.listTemplates()); }
     catch (e) {
@@ -104,26 +75,6 @@ export function StoreProvider({ children }) {
       else if (e instanceof Error) setError(e.message);
     }
   }, [settle]);
-
-  const refreshMeasurements = useCallback(async () => {
-    try {
-      const { start, end } = trailingWindow(selectedDate, 90);
-      setMeasurements(await api.listMeasurements(start, end));
-    } catch (e) {
-      if (e instanceof APIError && e.status === 401) settle(null);
-      else if (e instanceof Error) setError(e.message);
-    }
-  }, [selectedDate, settle]);
-
-  const refreshPhotos = useCallback(async () => {
-    try {
-      const { start, end } = trailingWindow(selectedDate, 90);
-      setPhotos(await api.listPhotos(start, end));
-    } catch (e) {
-      if (e instanceof APIError && e.status === 401) settle(null);
-      else if (e instanceof Error) setError(e.message);
-    }
-  }, [selectedDate, settle]);
 
   const refreshInsights = useCallback(async () => {
     try { setInsights(await api.getInsights(selectedDate)); }
@@ -139,23 +90,17 @@ export function StoreProvider({ children }) {
     if (authState === "ready") {
       refreshTrackers();
       refreshWeek();
-      refreshWeights();
       refreshTemplates();
-      refreshMeasurements();
-      refreshPhotos();
       refreshInsights();
     }
-  }, [authState, refreshTrackers, refreshWeek, refreshWeights, refreshTemplates,
-      refreshMeasurements, refreshPhotos, refreshInsights]);
+  }, [authState, refreshTrackers, refreshWeek, refreshTemplates, refreshInsights]);
 
   useEffect(() => {
     if (authState === "ready") {
       refreshWeek();
-      refreshWeights();
-      refreshMeasurements();
       refreshInsights();
     }
-  }, [selectedDate, authState, refreshWeek, refreshWeights, refreshMeasurements, refreshInsights]);
+  }, [selectedDate, authState, refreshWeek, refreshInsights]);
 
   const signup = useCallback(async (email, password, displayName) => {
     const { user } = await api.signup({ email, password, displayName });
@@ -200,7 +145,7 @@ export function StoreProvider({ children }) {
     setWeekEntries((prev) => prev.filter((e) => e.trackerId !== id));
   }, []);
 
-  // Entries (workouts + non-macro intakes)
+  // Entries
   const createEntry = useCallback(async (body) => {
     const e = await api.createEntry(body);
     await refreshWeek();
@@ -216,17 +161,6 @@ export function StoreProvider({ children }) {
     await api.deleteEntry(id);
     await refreshWeek();
   }, [refreshWeek]);
-
-  // Weights
-  const logWeight = useCallback(async (body) => {
-    await api.logWeight(body);
-    await refreshWeights();
-  }, [refreshWeights]);
-
-  const deleteWeight = useCallback(async (id) => {
-    await api.deleteWeight(id);
-    await refreshWeights();
-  }, [refreshWeights]);
 
   // Nutrition
   const createNutrition = useCallback(async (body) => {
@@ -262,58 +196,25 @@ export function StoreProvider({ children }) {
     await refreshTemplates();
   }, [refreshTemplates]);
 
-  // Measurements
-  const logMeasurement = useCallback(async (body) => {
-    await api.logMeasurement(body);
-    await Promise.all([refreshMeasurements(), refreshInsights()]);
-  }, [refreshMeasurements, refreshInsights]);
-
-  const deleteMeasurement = useCallback(async (id) => {
-    await api.deleteMeasurement(id);
-    await Promise.all([refreshMeasurements(), refreshInsights()]);
-  }, [refreshMeasurements, refreshInsights]);
-
-  // Photos
-  const uploadPhoto = useCallback(async (file, meta) => {
-    const p = await api.uploadPhoto(file, meta);
-    await refreshPhotos();
-    return p;
-  }, [refreshPhotos]);
-
-  const deletePhotoCb = useCallback(async (id) => {
-    await api.deletePhoto(id);
-    await refreshPhotos();
-  }, [refreshPhotos]);
-
   const value = useMemo(() => ({
-    state: authState, user, trackers, weekEntries, nutrition, weights, templates,
-    measurements, photos, insights,
+    state: authState, user, trackers, weekEntries, nutrition, templates, insights,
     selectedDate, error,
     setSelectedDate,
     signup, login, signOut, deleteAccount, updateProfile,
-    refreshTrackers, refreshWeek, refreshWeights, refreshTemplates,
-    refreshMeasurements, refreshPhotos, refreshInsights,
+    refreshTrackers, refreshWeek, refreshTemplates, refreshInsights,
     createTracker, updateTracker, deleteTracker: deleteTrackerCb,
     createEntry, updateEntry: updateEntryCb, deleteEntry: deleteEntryCb,
-    logWeight, deleteWeight,
     createNutrition, updateNutrition, deleteNutrition,
     createTemplate, updateTemplate, deleteTemplate: deleteTemplateCb,
-    logMeasurement, deleteMeasurement,
-    uploadPhoto, deletePhoto: deletePhotoCb,
   }), [
-    authState, user, trackers, weekEntries, nutrition, weights, templates,
-    measurements, photos, insights,
+    authState, user, trackers, weekEntries, nutrition, templates, insights,
     selectedDate, error,
     signup, login, signOut, deleteAccount, updateProfile,
-    refreshTrackers, refreshWeek, refreshWeights, refreshTemplates,
-    refreshMeasurements, refreshPhotos, refreshInsights,
+    refreshTrackers, refreshWeek, refreshTemplates, refreshInsights,
     createTracker, updateTracker, deleteTrackerCb,
     createEntry, updateEntryCb, deleteEntryCb,
-    logWeight, deleteWeight,
     createNutrition, updateNutrition, deleteNutrition,
     createTemplate, updateTemplate, deleteTemplateCb,
-    logMeasurement, deleteMeasurement,
-    uploadPhoto, deletePhotoCb,
   ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

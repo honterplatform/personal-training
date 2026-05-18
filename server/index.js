@@ -11,11 +11,8 @@ import authRoutes from "./routes/auth.js";
 import trackerRoutes from "./routes/trackers.js";
 import entryRoutes from "./routes/entries.js";
 import coachRoutes from "./routes/coach.js";
-import weightRoutes from "./routes/weights.js";
 import nutritionRoutes from "./routes/nutrition.js";
 import templateRoutes from "./routes/templates.js";
-import measurementRoutes from "./routes/measurements.js";
-import photoRoutes from "./routes/photos.js";
 import insightsRoutes from "./routes/insights.js";
 import adminRoutes from "./routes/admin.js";
 
@@ -34,13 +31,8 @@ app.get("/api/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/trackers", requireAuth, trackerRoutes);
 app.use("/api/entries", requireAuth, entryRoutes);
-app.use("/api/weights", requireAuth, weightRoutes);
 app.use("/api/nutrition", requireAuth, nutritionRoutes);
 app.use("/api/templates", requireAuth, templateRoutes);
-app.use("/api/measurements", requireAuth, measurementRoutes);
-// /api/photos applies requireAuth per-route — the file streaming endpoint
-// is JWT-gated instead so <img src> can load without a session cookie.
-app.use("/api/photos", photoRoutes);
 app.use("/api/insights", requireAuth, insightsRoutes);
 app.use("/api/coach", requireAuth, coachRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);

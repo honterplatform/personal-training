@@ -47,11 +47,6 @@ export const api = {
   updateEntry: (id, body) => request(`/api/entries/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteEntry: (id) => request(`/api/entries/${id}`, { method: "DELETE" }),
 
-  // Weights
-  listWeights: (start, end) => request(`/api/weights?start=${start}&end=${end}`),
-  logWeight: (body) => request("/api/weights", { method: "POST", body: JSON.stringify(body) }),
-  deleteWeight: (id) => request(`/api/weights/${id}`, { method: "DELETE" }),
-
   // Nutrition
   listNutrition: (start, end) => request(`/api/nutrition?start=${start}&end=${end}`),
   createNutrition: (body) => request("/api/nutrition", { method: "POST", body: JSON.stringify(body) }),
@@ -65,35 +60,6 @@ export const api = {
   updateTemplate: (id, body) => request(`/api/templates/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteTemplate: (id) => request(`/api/templates/${id}`, { method: "DELETE" }),
   reorderTemplates: (items) => request("/api/templates/order", { method: "PUT", body: JSON.stringify({ items }) }),
-
-  // Measurements
-  listMeasurements: (start, end) => request(`/api/measurements?start=${start}&end=${end}`),
-  logMeasurement: (body) => request("/api/measurements", { method: "POST", body: JSON.stringify(body) }),
-  updateMeasurement: (id, body) => request(`/api/measurements/${id}`, { method: "PUT", body: JSON.stringify(body) }),
-  deleteMeasurement: (id) => request(`/api/measurements/${id}`, { method: "DELETE" }),
-
-  // Photos (multipart upload uses raw fetch — JSON wrapper doesn't suit)
-  listPhotos: (start, end) => {
-    const qs = start && end ? `?start=${start}&end=${end}` : "";
-    return request(`/api/photos${qs}`);
-  },
-  uploadPhoto: async (file, { date, angle, notes }) => {
-    const fd = new FormData();
-    fd.append("image", file);
-    fd.append("date", date);
-    fd.append("angle", angle);
-    if (notes) fd.append("notes", notes);
-    const res = await fetch(apiBaseURL + "/api/photos", { method: "POST", credentials: "include", body: fd });
-    if (res.status === 401) throw new APIError("unauthorized", 401);
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      let msg = `HTTP ${res.status}`;
-      try { msg = JSON.parse(text).error || msg; } catch {}
-      throw new APIError(msg, res.status);
-    }
-    return res.json();
-  },
-  deletePhoto: (id) => request(`/api/photos/${id}`, { method: "DELETE" }),
 
   // Insights
   getInsights: (date) => request(`/api/insights${date ? `?date=${date}` : ""}`),

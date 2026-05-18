@@ -25,7 +25,6 @@ export default function SettingsSheet({ onClose }) {
         <div className="settings-body">
           <ProfileSection user={user} updateProfile={updateProfile} />
           <DemographicsSection user={user} updateProfile={updateProfile} />
-          <ScheduleSection user={user} updateProfile={updateProfile} />
           <TargetsSection user={user} updateProfile={updateProfile} />
           <TrackersSection
             trackers={trackers}
@@ -418,86 +417,14 @@ function NewTrackerForm({ onCancel, onSubmit }) {
   );
 }
 
-/* ---------- Weekly schedule ---------- */
-const WEEKDAYS = [
-  { id: "mon", label: "Mon" },
-  { id: "tue", label: "Tue" },
-  { id: "wed", label: "Wed" },
-  { id: "thu", label: "Thu" },
-  { id: "fri", label: "Fri" },
-  { id: "sat", label: "Sat" },
-  { id: "sun", label: "Sun" },
-];
-
-function ScheduleSection({ user, updateProfile }) {
-  const [draft, setDraft] = useState(() => normalizeSchedule(user?.weeklySchedule));
-  const [savedFlash, setSavedFlash] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setDraft(normalizeSchedule(user?.weeklySchedule));
-  }, [user?._id]);
-
-  async function commit(next) {
-    setDraft(next);
-    if (saving) return;
-    setSaving(true);
-    try {
-      await updateProfile({ weeklySchedule: next });
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 1500);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Section title="Weekly schedule">
-      <p className="settings-section-hint">
-        Pick what you train each day. Days marked Rest use rest-day targets.
-      </p>
-      <div className="settings-schedule">
-        {WEEKDAYS.map((d) => (
-          <div key={d.id} className="settings-schedule-row">
-            <span className="settings-schedule-day">{d.label}</span>
-            <input
-              type="text"
-              className="settings-schedule-input"
-              placeholder="rest"
-              value={draft[d.id] ?? ""}
-              onChange={(e) =>
-                setDraft({ ...draft, [d.id]: e.target.value })
-              }
-              onBlur={() => commit({ ...draft, [d.id]: draft[d.id]?.trim() || null })}
-            />
-          </div>
-        ))}
-      </div>
-      {savedFlash && <div className="settings-saved-flash">saved</div>}
-    </Section>
-  );
-}
-
-function normalizeSchedule(s) {
-  const o = {};
-  for (const d of WEEKDAYS) o[d.id] = s?.[d.id] ?? null;
-  return o;
-}
-
 /* ---------- Targets ---------- */
 function TargetsSection({ user, updateProfile }) {
-  const [draft, setDraft] = useState(() => ({
-    trainingDay: { ...defaultMacro(user?.targets?.trainingDay) },
-    restDay:     { ...defaultMacro(user?.targets?.restDay) },
-  }));
+  const [draft, setDraft] = useState(() => defaultMacro(user?.targets));
   const [savedFlash, setSavedFlash] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setDraft({
-      trainingDay: defaultMacro(user?.targets?.trainingDay),
-      restDay:     defaultMacro(user?.targets?.restDay),
-    });
+    setDraft(defaultMacro(user?.targets));
   }, [user?._id]);
 
   async function commit(next) {
@@ -505,12 +432,7 @@ function TargetsSection({ user, updateProfile }) {
     if (saving) return;
     setSaving(true);
     try {
-      await updateProfile({
-        targets: {
-          trainingDay: toNumbers(next.trainingDay),
-          restDay:     toNumbers(next.restDay),
-        },
-      });
+      await updateProfile({ targets: toNumbers(next) });
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
     } finally {
@@ -518,8 +440,8 @@ function TargetsSection({ user, updateProfile }) {
     }
   }
 
-  function setField(dayType, key, value) {
-    setDraft((prev) => ({ ...prev, [dayType]: { ...prev[dayType], [key]: value } }));
+  function setField(key, value) {
+    setDraft((prev) => ({ ...prev, [key]: value }));
   }
 
   function blurCommit() {
@@ -529,39 +451,20 @@ function TargetsSection({ user, updateProfile }) {
   return (
     <Section title="Calorie + macro targets">
       <p className="settings-section-hint">
-        Used by the Nutrition card. Different day types let you cycle macros
-        (e.g. higher carbs on training days).
+        Used by the Nutrition card every day.
       </p>
 
-      <TargetGroup
-        label="Training day"
-        values={draft.trainingDay}
-        setField={(k, v) => setField("trainingDay", k, v)}
-        onBlur={blurCommit}
-      />
-      <TargetGroup
-        label="Rest day"
-        values={draft.restDay}
-        setField={(k, v) => setField("restDay", k, v)}
-        onBlur={blurCommit}
-      />
+      <div className="settings-target-group">
+        <div className="settings-target-grid">
+          <TargetCell name="kcal"     value={draft.kcal}     setValue={(v) => setField("kcal", v)}     onBlur={blurCommit} />
+          <TargetCell name="protein"  unit="g" value={draft.proteinG} setValue={(v) => setField("proteinG", v)} onBlur={blurCommit} />
+          <TargetCell name="carbs"    unit="g" value={draft.carbsG}   setValue={(v) => setField("carbsG", v)}   onBlur={blurCommit} />
+          <TargetCell name="fat"      unit="g" value={draft.fatG}     setValue={(v) => setField("fatG", v)}     onBlur={blurCommit} />
+        </div>
+      </div>
 
       {savedFlash && <div className="settings-saved-flash">saved</div>}
     </Section>
-  );
-}
-
-function TargetGroup({ label, values, setField, onBlur }) {
-  return (
-    <div className="settings-target-group">
-      <div className="settings-target-label">{label}</div>
-      <div className="settings-target-grid">
-        <TargetCell name="kcal"     value={values.kcal}     setValue={(v) => setField("kcal", v)}     onBlur={onBlur} />
-        <TargetCell name="protein"  unit="g" value={values.proteinG} setValue={(v) => setField("proteinG", v)} onBlur={onBlur} />
-        <TargetCell name="carbs"    unit="g" value={values.carbsG}   setValue={(v) => setField("carbsG", v)}   onBlur={onBlur} />
-        <TargetCell name="fat"      unit="g" value={values.fatG}     setValue={(v) => setField("fatG", v)}     onBlur={onBlur} />
-      </div>
-    </div>
   );
 }
 

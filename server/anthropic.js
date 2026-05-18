@@ -324,7 +324,7 @@ export async function coachReview({ contextArgs }) {
       messages: [
         {
           role: "user",
-          content: `${context}\n\nWrite a weekly review for the athlete in 4-5 sentences. Cover: training volume vs planned, macro/calorie adherence trend, weight/waist trend if visible, and one specific thing to focus on next week. Stay grounded in the numbers above — do not invent.`,
+          content: `${context}\n\nWrite a weekly review for the athlete in 4-5 sentences. Cover: training volume this week, macro/calorie adherence trend, and one specific thing to focus on next week. Stay grounded in the numbers above — do not invent.`,
         },
       ],
     });

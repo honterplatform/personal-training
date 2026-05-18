@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../lib/store.jsx";
 import { api } from "../lib/api.js";
-import { dayTypeFor, dayTypeLabel, targetFor, hasTargets } from "../lib/dayType.js";
 import { isSpeechSupported, createRecognizer } from "../lib/voice.js";
 import { MicIcon } from "./Icons.jsx";
+
+function targetFor(user) {
+  const t = user?.targets;
+  if (!t || t.kcal == null) return null;
+  return t;
+}
+function hasTargets(user) {
+  return user?.targets?.kcal != null;
+}
 
 const SLOT_ORDER = ["breakfast", "preTraining", "lunch", "snack", "dinner", "optional"];
 const SLOT_LABEL = {
@@ -22,8 +30,7 @@ export default function NutritionCard() {
   } = useStore();
 
   const dayMeals = nutrition.filter((m) => m.date === selectedDate);
-  const dayType = dayTypeFor(user, selectedDate);
-  const target = targetFor(user, selectedDate);
+  const target = targetFor(user);
 
   const [expanded, setExpanded] = useState(dayMeals.length > 0);
   const [adding, setAdding] = useState(false);
@@ -55,7 +62,6 @@ export default function NutritionCard() {
   if (!hasTargets(user)) {
     return (
       <section className="nutrition-card collapsed">
-        <span className={`day-type-chip ${dayType}`}>{dayTypeLabel(dayType)}</span>
         <span className="nutrition-card-cta">
           Set up calorie + macro targets in settings →
         </span>
@@ -83,7 +89,6 @@ export default function NutritionCard() {
         onClick={() => setExpanded(true)}
         role="button"
       >
-        <span className={`day-type-chip ${dayType}`}>{dayTypeLabel(dayType)}</span>
         <span className="nutrition-card-empty-line">no meals logged</span>
         <button
           className="nutrition-card-add-mini"
@@ -98,9 +103,8 @@ export default function NutritionCard() {
 
   return (
     <section className="nutrition-card">
-      <header className="nutrition-card-header">
-        <span className={`day-type-chip ${dayType}`}>{dayTypeLabel(dayType)}</span>
-        {dayMeals.length === 0 && (
+      {dayMeals.length === 0 && (
+        <header className="nutrition-card-header">
           <button
             className="nutrition-card-collapse"
             onClick={() => setExpanded(false)}
@@ -108,8 +112,8 @@ export default function NutritionCard() {
           >
             −
           </button>
-        )}
-      </header>
+        </header>
+      )}
 
       <div className="nutrition-kcal">
         <span className="nutrition-kcal-actual">{totals.calories.toLocaleString()}</span>
