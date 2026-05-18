@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, APIError } from "./api.js";
-import { todayISO, weekRange } from "./dates.js";
+import { todayISO, weekRange, isoToDate } from "./dates.js";
 
 const StoreContext = createContext(null);
 
@@ -9,11 +9,26 @@ function sortTrackers(a, b) {
   return a.order - b.order;
 }
 
+// Trailing window of N days ending at the selected date.
+function trailingWindow(iso, days) {
+  const end = isoToDate(iso);
+  const start = new Date(end.getTime() - (days - 1) * 86_400_000);
+  const fmt = (d) => {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  };
+  return { start: fmt(start), end: fmt(end) };
+}
+
 export function StoreProvider({ children }) {
   const [authState, setAuthState] = useState("loading");
   const [user, setUser] = useState(null);
   const [trackers, setTrackers] = useState([]);
   const [weekEntries, setWeekEntries] = useState([]);
+  const [nutrition, setNutrition] = useState([]);    // current week's meals
+  const [weights, setWeights] = useState([]);        // last 30 days
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [error, setError] = useState(null);
 
@@ -22,6 +37,8 @@ export function StoreProvider({ children }) {
       setUser(null);
       setTrackers([]);
       setWeekEntries([]);
+      setNutrition([]);
+      setWeights([]);
       setAuthState("signedOut");
       return;
     }
@@ -50,7 +67,22 @@ export function StoreProvider({ children }) {
   const refreshWeek = useCallback(async () => {
     try {
       const { start, end } = weekRange(selectedDate);
-      setWeekEntries(await api.listEntries(start, end));
+      const [entries, meals] = await Promise.all([
+        api.listEntries(start, end),
+        api.listNutrition(start, end),
+      ]);
+      setWeekEntries(entries);
+      setNutrition(meals);
+    } catch (e) {
+      if (e instanceof APIError && e.status === 401) settle(null);
+      else if (e instanceof Error) setError(e.message);
+    }
+  }, [selectedDate, settle]);
+
+  const refreshWeights = useCallback(async () => {
+    try {
+      const { start, end } = trailingWindow(selectedDate, 30);
+      setWeights(await api.listWeights(start, end));
     } catch (e) {
       if (e instanceof APIError && e.status === 401) settle(null);
       else if (e instanceof Error) setError(e.message);
@@ -63,12 +95,16 @@ export function StoreProvider({ children }) {
     if (authState === "ready") {
       refreshTrackers();
       refreshWeek();
+      refreshWeights();
     }
-  }, [authState, refreshTrackers, refreshWeek]);
+  }, [authState, refreshTrackers, refreshWeek, refreshWeights]);
 
   useEffect(() => {
-    if (authState === "ready") refreshWeek();
-  }, [selectedDate, authState, refreshWeek]);
+    if (authState === "ready") {
+      refreshWeek();
+      refreshWeights();
+    }
+  }, [selectedDate, authState, refreshWeek, refreshWeights]);
 
   const signup = useCallback(async (email, password, displayName) => {
     const { user } = await api.signup({ email, password, displayName });
@@ -95,6 +131,7 @@ export function StoreProvider({ children }) {
     settle(user);
   }, [settle]);
 
+  // Trackers
   const createTracker = useCallback(async (body) => {
     const t = await api.createTracker(body);
     setTrackers((prev) => [...prev, t].sort(sortTrackers));
@@ -112,6 +149,7 @@ export function StoreProvider({ children }) {
     setWeekEntries((prev) => prev.filter((e) => e.trackerId !== id));
   }, []);
 
+  // Entries (workouts + non-macro intakes)
   const createEntry = useCallback(async (body) => {
     const e = await api.createEntry(body);
     await refreshWeek();
@@ -128,19 +166,53 @@ export function StoreProvider({ children }) {
     await refreshWeek();
   }, [refreshWeek]);
 
+  // Weights
+  const logWeight = useCallback(async (body) => {
+    await api.logWeight(body);
+    await refreshWeights();
+  }, [refreshWeights]);
+
+  const deleteWeight = useCallback(async (id) => {
+    await api.deleteWeight(id);
+    await refreshWeights();
+  }, [refreshWeights]);
+
+  // Nutrition
+  const createNutrition = useCallback(async (body) => {
+    const e = await api.createNutrition(body);
+    await refreshWeek();
+    return e;
+  }, [refreshWeek]);
+
+  const updateNutrition = useCallback(async (id, body) => {
+    await api.updateNutrition(id, body);
+    await refreshWeek();
+  }, [refreshWeek]);
+
+  const deleteNutrition = useCallback(async (id) => {
+    await api.deleteNutrition(id);
+    await refreshWeek();
+  }, [refreshWeek]);
+
   const value = useMemo(() => ({
-    state: authState, user, trackers, weekEntries, selectedDate, error,
+    state: authState, user, trackers, weekEntries, nutrition, weights,
+    selectedDate, error,
     setSelectedDate,
     signup, login, signOut, deleteAccount, updateProfile,
-    refreshTrackers, refreshWeek,
+    refreshTrackers, refreshWeek, refreshWeights,
     createTracker, updateTracker, deleteTracker: deleteTrackerCb,
     createEntry, updateEntry: updateEntryCb, deleteEntry: deleteEntryCb,
+    logWeight, deleteWeight,
+    createNutrition, updateNutrition, deleteNutrition,
   }), [
-    authState, user, trackers, weekEntries, selectedDate, error,
+    authState, user, trackers, weekEntries, nutrition, weights,
+    selectedDate, error,
     signup, login, signOut, deleteAccount, updateProfile,
-    refreshTrackers, refreshWeek,
+    refreshTrackers, refreshWeek, refreshWeights,
     createTracker, updateTracker, deleteTrackerCb,
     createEntry, updateEntryCb, deleteEntryCb,
+    logWeight, deleteWeight,
+    createNutrition, updateNutrition, deleteNutrition,
   ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

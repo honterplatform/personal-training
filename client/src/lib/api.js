@@ -47,6 +47,17 @@ export const api = {
   updateEntry: (id, body) => request(`/api/entries/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteEntry: (id) => request(`/api/entries/${id}`, { method: "DELETE" }),
 
+  // Weights
+  listWeights: (start, end) => request(`/api/weights?start=${start}&end=${end}`),
+  logWeight: (body) => request("/api/weights", { method: "POST", body: JSON.stringify(body) }),
+  deleteWeight: (id) => request(`/api/weights/${id}`, { method: "DELETE" }),
+
+  // Nutrition
+  listNutrition: (start, end) => request(`/api/nutrition?start=${start}&end=${end}`),
+  createNutrition: (body) => request("/api/nutrition", { method: "POST", body: JSON.stringify(body) }),
+  updateNutrition: (id, body) => request(`/api/nutrition/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteNutrition: (id) => request(`/api/nutrition/${id}`, { method: "DELETE" }),
+
   getCoachThread: () => request("/api/coach"),
   sendCoachMessage: (message, date) => request("/api/coach", { method: "POST", body: JSON.stringify({ message, date }) }),
   coachOpener: (date) => request("/api/coach/opener", { method: "POST", body: JSON.stringify({ date }) }),
