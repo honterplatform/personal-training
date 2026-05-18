@@ -7,6 +7,7 @@ import Conversation from "../models/Conversation.js";
 import Weight from "../models/Weight.js";
 import NutritionEntry from "../models/NutritionEntry.js";
 import MealTemplate from "../models/MealTemplate.js";
+import Measurement from "../models/Measurement.js";
 import { issueSession, clearSession, requireAuth } from "../auth.js";
 
 const router = express.Router();
@@ -110,13 +111,14 @@ router.get("/me/export", requireAuth, async (req, res) => {
   const userId = req.userId;
   const user = await User.findById(userId);
   if (!user) return res.status(401).json({ error: "unauthorized" });
-  const [trackers, entries, conversation, weights, nutrition, templates] = await Promise.all([
+  const [trackers, entries, conversation, weights, nutrition, templates, measurements] = await Promise.all([
     Tracker.find({ userId }).lean(),
     Entry.find({ userId }).lean(),
     Conversation.findOne({ userId }).lean(),
     Weight.find({ userId }).lean(),
     NutritionEntry.find({ userId }).lean(),
     MealTemplate.find({ userId }).lean(),
+    Measurement.find({ userId }).lean(),
   ]);
   res.setHeader("Content-Disposition", `attachment; filename=log-export-${userId}.json`);
   res.setHeader("Content-Type", "application/json");
@@ -130,6 +132,7 @@ router.get("/me/export", requireAuth, async (req, res) => {
         weights,
         nutrition,
         templates,
+        measurements,
         conversation: conversation ? { messages: conversation.messages } : null,
       },
       null,
@@ -147,6 +150,7 @@ router.delete("/me", requireAuth, async (req, res) => {
     Weight.deleteMany({ userId }),
     NutritionEntry.deleteMany({ userId }),
     MealTemplate.deleteMany({ userId }),
+    Measurement.deleteMany({ userId }),
     User.deleteOne({ _id: userId }),
   ]);
   clearSession(res);

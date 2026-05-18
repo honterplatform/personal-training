@@ -14,6 +14,7 @@ import coachRoutes from "./routes/coach.js";
 import weightRoutes from "./routes/weights.js";
 import nutritionRoutes from "./routes/nutrition.js";
 import templateRoutes from "./routes/templates.js";
+import measurementRoutes from "./routes/measurements.js";
 import adminRoutes from "./routes/admin.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,6 +35,7 @@ app.use("/api/entries", requireAuth, entryRoutes);
 app.use("/api/weights", requireAuth, weightRoutes);
 app.use("/api/nutrition", requireAuth, nutritionRoutes);
 app.use("/api/templates", requireAuth, templateRoutes);
+app.use("/api/measurements", requireAuth, measurementRoutes);
 app.use("/api/coach", requireAuth, coachRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);
 
