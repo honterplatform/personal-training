@@ -8,6 +8,8 @@ import Weight from "../models/Weight.js";
 import NutritionEntry from "../models/NutritionEntry.js";
 import MealTemplate from "../models/MealTemplate.js";
 import Measurement from "../models/Measurement.js";
+import ProgressPhoto from "../models/ProgressPhoto.js";
+import { deleteUserPhotos } from "../lib/storage.js";
 import { issueSession, clearSession, requireAuth } from "../auth.js";
 
 const router = express.Router();
@@ -111,7 +113,7 @@ router.get("/me/export", requireAuth, async (req, res) => {
   const userId = req.userId;
   const user = await User.findById(userId);
   if (!user) return res.status(401).json({ error: "unauthorized" });
-  const [trackers, entries, conversation, weights, nutrition, templates, measurements] = await Promise.all([
+  const [trackers, entries, conversation, weights, nutrition, templates, measurements, photos] = await Promise.all([
     Tracker.find({ userId }).lean(),
     Entry.find({ userId }).lean(),
     Conversation.findOne({ userId }).lean(),
@@ -119,6 +121,8 @@ router.get("/me/export", requireAuth, async (req, res) => {
     NutritionEntry.find({ userId }).lean(),
     MealTemplate.find({ userId }).lean(),
     Measurement.find({ userId }).lean(),
+    // Photo binary stays on disk; export includes metadata only
+    ProgressPhoto.find({ userId }).lean(),
   ]);
   res.setHeader("Content-Disposition", `attachment; filename=log-export-${userId}.json`);
   res.setHeader("Content-Type", "application/json");
@@ -133,6 +137,7 @@ router.get("/me/export", requireAuth, async (req, res) => {
         nutrition,
         templates,
         measurements,
+        photos,
         conversation: conversation ? { messages: conversation.messages } : null,
       },
       null,
@@ -151,6 +156,8 @@ router.delete("/me", requireAuth, async (req, res) => {
     NutritionEntry.deleteMany({ userId }),
     MealTemplate.deleteMany({ userId }),
     Measurement.deleteMany({ userId }),
+    ProgressPhoto.deleteMany({ userId }),
+    deleteUserPhotos(userId),  // remove the actual files from disk
     User.deleteOne({ _id: userId }),
   ]);
   clearSession(res);
