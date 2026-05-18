@@ -177,7 +177,7 @@ function clampInt(n) {
 
 // ---------- Coach context ----------
 
-function buildContextBlock({ user, trackers, weekEntries, weekStart, selectedDate, dayEntries }) {
+function buildContextBlock({ user, trackers, weekEntries, weekStart, selectedDate, dayEntries, insights }) {
   const trackerById = Object.fromEntries(trackers.map((t) => [String(t._id), t]));
 
   const weeklyTotals = {};
@@ -238,6 +238,26 @@ function buildContextBlock({ user, trackers, weekEntries, weekStart, selectedDat
     demo.fitnessLevel ? `${demo.fitnessLevel}` : null,
   ].filter(Boolean).join(", ") || "(no demographic data)";
 
+  // Insights (computed elsewhere) — give the coach grounded patterns
+  // instead of generic advice. Only include categories that have items.
+  const insightLines = (() => {
+    if (!insights) return "";
+    const parts = [];
+    if (insights.current?.length) {
+      parts.push("Current signals:");
+      for (const i of insights.current) parts.push(`  · ${i.text}`);
+    }
+    if (insights.patterns?.length) {
+      parts.push("Longer-term patterns:");
+      for (const i of insights.patterns) parts.push(`  · ${i.text}`);
+    }
+    if (insights.warnings?.length) {
+      parts.push("Things to watch:");
+      for (const i of insights.warnings) parts.push(`  · ${i.text}`);
+    }
+    return parts.length ? parts.join("\n") + "\n" : "";
+  })();
+
   return `--- ATHLETE CONTEXT (regenerated each turn — use as ground truth) ---
 About: ${aboutLines}
 
@@ -249,7 +269,8 @@ Total kcal burned this week: ${totalKcal}
 Selected date: ${selectedDate}
 Entries on selected date:
 ${dayLines || "  (nothing logged)"}
---- END CONTEXT ---`;
+
+${insightLines}--- END CONTEXT ---`;
 }
 
 const COACH_SYSTEM = `You are a direct, grounded personal training coach for one athlete. You have access to their settings, trackers, and training data, refreshed each turn in the ATHLETE CONTEXT block.
