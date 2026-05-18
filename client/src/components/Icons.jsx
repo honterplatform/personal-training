@@ -102,3 +102,10 @@ export const LockIcon = (p) => (
     <path d="M8 11V8a4 4 0 018 0v3" />
   </Icon>
 );
+export const MicIcon = (p) => (
+  <Icon {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5 11a7 7 0 0014 0" />
+    <path d="M12 18v3M9 21h6" />
+  </Icon>
+);

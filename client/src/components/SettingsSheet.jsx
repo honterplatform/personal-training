@@ -5,7 +5,9 @@ import { XIcon } from "./Icons.jsx";
 
 export default function SettingsSheet({ onClose }) {
   const {
-    user, trackers, updateProfile, createTracker, updateTracker, deleteTracker,
+    user, trackers, templates,
+    updateProfile, createTracker, updateTracker, deleteTracker,
+    updateTemplate, deleteTemplate,
     signOut, deleteAccount,
   } = useStore();
 
@@ -30,6 +32,11 @@ export default function SettingsSheet({ onClose }) {
             createTracker={createTracker}
             updateTracker={updateTracker}
             deleteTracker={deleteTracker}
+          />
+          <TemplatesSection
+            templates={templates}
+            updateTemplate={updateTemplate}
+            deleteTemplate={deleteTemplate}
           />
           <AccountSection signOut={signOut} deleteAccount={deleteAccount} />
         </div>
@@ -589,6 +596,78 @@ function defaultMacro(m) {
 function toNumbers(m) {
   const n = (v) => (v === "" || v == null ? null : Number(v));
   return { kcal: n(m.kcal), proteinG: n(m.proteinG), carbsG: n(m.carbsG), fatG: n(m.fatG) };
+}
+
+/* ---------- Meal templates ---------- */
+const SLOT_LABEL_SHORT = {
+  breakfast: "Breakfast", preTraining: "Pre-train", lunch: "Lunch",
+  snack: "Snack", dinner: "Dinner", optional: "Optional",
+};
+
+function TemplatesSection({ templates, updateTemplate, deleteTemplate }) {
+  return (
+    <Section title="Meal templates">
+      <p className="settings-section-hint">
+        One-tap chips on the home screen. Up to 12 can be pinned at once;
+        pin/unpin to control which show up.
+      </p>
+      <div className="settings-template-list">
+        {templates.length === 0 && (
+          <div className="settings-tracker-empty">
+            No templates yet — tick "save as template" when you log a meal.
+          </div>
+        )}
+        {templates.map((t) => (
+          <TemplateRow
+            key={t._id}
+            template={t}
+            onUpdate={(body) => updateTemplate(t._id, body)}
+            onDelete={() => {
+              if (confirm(`Delete template "${t.name}"?`)) deleteTemplate(t._id);
+            }}
+          />
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function TemplateRow({ template, onUpdate, onDelete }) {
+  const [name, setName] = useState(template.name);
+  const [pinned, setPinned] = useState(template.pinned);
+
+  function commit(patch = {}) {
+    onUpdate({
+      name: name.trim() || template.name,
+      pinned,
+      ...patch,
+    });
+  }
+
+  return (
+    <div className="settings-template-row">
+      <input
+        className="settings-tracker-name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() => commit()}
+      />
+      <span className="settings-template-meta">
+        <span className="settings-template-slot">{SLOT_LABEL_SHORT[template.mealSlot]}</span>
+        <span className="settings-template-macros">
+          {template.calories} kcal · {template.proteinG}P {template.carbsG}C {template.fatG}F
+        </span>
+      </span>
+      <button
+        className={`settings-pin ${pinned ? "active" : ""}`}
+        onClick={() => { setPinned(!pinned); commit({ pinned: !pinned }); }}
+        title={pinned ? "pinned" : "click to pin"}
+      >
+        {pinned ? "★" : "☆"}
+      </button>
+      <button className="settings-delete" onClick={onDelete} title="delete template">✕</button>
+    </div>
+  );
 }
 
 /* ---------- Account ---------- */

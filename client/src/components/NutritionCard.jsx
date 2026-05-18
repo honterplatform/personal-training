@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../lib/store.jsx";
 import { api } from "../lib/api.js";
 import { dayTypeFor, dayTypeLabel, targetFor, hasTargets } from "../lib/dayType.js";
+import { isSpeechSupported, createRecognizer } from "../lib/voice.js";
+import { MicIcon } from "./Icons.jsx";
 
 const SLOT_ORDER = ["breakfast", "preTraining", "lunch", "snack", "dinner", "optional"];
 const SLOT_LABEL = {
@@ -261,8 +263,29 @@ function MealForm({ onCancel, onSaved }) {
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const textInputRef = useRef(null);
+  const recRef = useRef(null);
+  const [listening, setListening] = useState(false);
+  const speechOn = isSpeechSupported();
 
   useEffect(() => { textInputRef.current?.focus(); }, []);
+
+  function toggleVoice() {
+    if (listening) {
+      recRef.current?.stop();
+      return;
+    }
+    const rec = createRecognizer({
+      onResult: ({ transcript }) => setText(transcript),
+      onError: () => setListening(false),
+      onEnd: () => setListening(false),
+    });
+    if (!rec) return;
+    recRef.current = rec;
+    setListening(true);
+    rec.start();
+  }
+
+  useEffect(() => () => { recRef.current?.stop(); }, []);
 
   async function runEstimate(e) {
     e?.preventDefault?.();
@@ -351,6 +374,17 @@ function MealForm({ onCancel, onSaved }) {
             onChange={(e) => setText(e.target.value)}
             placeholder="200g chicken breast, 200g rice, salad with avocado"
           />
+          {speechOn && (
+            <button
+              type="button"
+              onClick={toggleVoice}
+              className={`meal-form-mic ${listening ? "listening" : ""}`}
+              title={listening ? "tap to stop" : "tap to speak"}
+              aria-label="voice input"
+            >
+              <MicIcon size={16} />
+            </button>
+          )}
         </div>
 
         {estimateError && <div className="onboarding-error">{estimateError}</div>}
