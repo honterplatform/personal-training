@@ -3,6 +3,7 @@ import { useStore } from "../lib/store.jsx";
 import Header from "./Header.jsx";
 import WeeklyHero from "./WeeklyHero.jsx";
 import DateSelector from "./DateSelector.jsx";
+import WeightCard from "./WeightCard.jsx";
 import TrackerCard from "./TrackerCard.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import CoachChat from "./CoachChat.jsx";
@@ -33,6 +34,8 @@ export default function HomeScreen() {
           onChange={setSelectedDate}
           dayKcal={dayKcal}
         />
+
+        <WeightCard />
 
         {trackers.length === 0 ? (
           <div className="empty-trackers">
