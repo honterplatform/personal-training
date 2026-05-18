@@ -57,6 +57,14 @@ export const api = {
   createNutrition: (body) => request("/api/nutrition", { method: "POST", body: JSON.stringify(body) }),
   updateNutrition: (id, body) => request(`/api/nutrition/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteNutrition: (id) => request(`/api/nutrition/${id}`, { method: "DELETE" }),
+  estimateMeal: (body) => request("/api/nutrition/estimate", { method: "POST", body: JSON.stringify(body) }),
+
+  // Meal templates
+  listTemplates: () => request("/api/templates"),
+  createTemplate: (body) => request("/api/templates", { method: "POST", body: JSON.stringify(body) }),
+  updateTemplate: (id, body) => request(`/api/templates/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteTemplate: (id) => request(`/api/templates/${id}`, { method: "DELETE" }),
+  reorderTemplates: (items) => request("/api/templates/order", { method: "PUT", body: JSON.stringify({ items }) }),
 
   getCoachThread: () => request("/api/coach"),
   sendCoachMessage: (message, date) => request("/api/coach", { method: "POST", body: JSON.stringify({ message, date }) }),

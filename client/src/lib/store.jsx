@@ -29,6 +29,7 @@ export function StoreProvider({ children }) {
   const [weekEntries, setWeekEntries] = useState([]);
   const [nutrition, setNutrition] = useState([]);    // current week's meals
   const [weights, setWeights] = useState([]);        // last 30 days
+  const [templates, setTemplates] = useState([]);    // all of the user's meal templates
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [error, setError] = useState(null);
 
@@ -39,6 +40,7 @@ export function StoreProvider({ children }) {
       setWeekEntries([]);
       setNutrition([]);
       setWeights([]);
+      setTemplates([]);
       setAuthState("signedOut");
       return;
     }
@@ -89,6 +91,14 @@ export function StoreProvider({ children }) {
     }
   }, [selectedDate, settle]);
 
+  const refreshTemplates = useCallback(async () => {
+    try { setTemplates(await api.listTemplates()); }
+    catch (e) {
+      if (e instanceof APIError && e.status === 401) settle(null);
+      else if (e instanceof Error) setError(e.message);
+    }
+  }, [settle]);
+
   useEffect(() => { boot(); }, [boot]);
 
   useEffect(() => {
@@ -96,8 +106,9 @@ export function StoreProvider({ children }) {
       refreshTrackers();
       refreshWeek();
       refreshWeights();
+      refreshTemplates();
     }
-  }, [authState, refreshTrackers, refreshWeek, refreshWeights]);
+  }, [authState, refreshTrackers, refreshWeek, refreshWeights, refreshTemplates]);
 
   useEffect(() => {
     if (authState === "ready") {
@@ -194,25 +205,44 @@ export function StoreProvider({ children }) {
     await refreshWeek();
   }, [refreshWeek]);
 
+  // Templates
+  const createTemplate = useCallback(async (body) => {
+    const t = await api.createTemplate(body);
+    await refreshTemplates();
+    return t;
+  }, [refreshTemplates]);
+
+  const updateTemplate = useCallback(async (id, body) => {
+    await api.updateTemplate(id, body);
+    await refreshTemplates();
+  }, [refreshTemplates]);
+
+  const deleteTemplateCb = useCallback(async (id) => {
+    await api.deleteTemplate(id);
+    await refreshTemplates();
+  }, [refreshTemplates]);
+
   const value = useMemo(() => ({
-    state: authState, user, trackers, weekEntries, nutrition, weights,
+    state: authState, user, trackers, weekEntries, nutrition, weights, templates,
     selectedDate, error,
     setSelectedDate,
     signup, login, signOut, deleteAccount, updateProfile,
-    refreshTrackers, refreshWeek, refreshWeights,
+    refreshTrackers, refreshWeek, refreshWeights, refreshTemplates,
     createTracker, updateTracker, deleteTracker: deleteTrackerCb,
     createEntry, updateEntry: updateEntryCb, deleteEntry: deleteEntryCb,
     logWeight, deleteWeight,
     createNutrition, updateNutrition, deleteNutrition,
+    createTemplate, updateTemplate, deleteTemplate: deleteTemplateCb,
   }), [
-    authState, user, trackers, weekEntries, nutrition, weights,
+    authState, user, trackers, weekEntries, nutrition, weights, templates,
     selectedDate, error,
     signup, login, signOut, deleteAccount, updateProfile,
-    refreshTrackers, refreshWeek, refreshWeights,
+    refreshTrackers, refreshWeek, refreshWeights, refreshTemplates,
     createTracker, updateTracker, deleteTrackerCb,
     createEntry, updateEntryCb, deleteEntryCb,
     logWeight, deleteWeight,
     createNutrition, updateNutrition, deleteNutrition,
+    createTemplate, updateTemplate, deleteTemplateCb,
   ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

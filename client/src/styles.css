@@ -2213,3 +2213,200 @@ input, textarea { font: inherit; }
   display: flex;
   gap: 6px;
 }
+
+/* ---------- NutritionCard: templates + source chips + toast ---------- */
+.meal-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.meal-template-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--cream);
+  border: 1px solid rgba(26,23,22,0.08);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 120ms;
+}
+.meal-template-chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.meal-template-kcal {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: rgba(26,23,22,0.45);
+  letter-spacing: 0.2px;
+}
+.meal-template-chip:hover .meal-template-kcal { color: var(--color-accent); opacity: 0.7; }
+
+/* Source chip on each entry */
+.meal-source-chip {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.meal-source-chip.ai-med {
+  background: rgba(26,23,22,0.05);
+  color: rgba(26,23,22,0.55);
+}
+.meal-source-chip.ai-low {
+  background: rgba(255,90,60,0.08);
+  color: var(--color-accent);
+}
+.meal-source-chip.fallback {
+  background: rgba(229,72,77,0.08);
+  color: var(--color-danger);
+  letter-spacing: 0.6px;
+  text-transform: lowercase;
+}
+
+/* Toast for one-tap template log */
+.meal-toast {
+  position: relative;
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.meal-toast-undo {
+  background: transparent;
+  border: 1px solid rgba(244,239,229,0.25);
+  border-radius: 999px;
+  color: var(--cream);
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.meal-toast-undo:hover { border-color: var(--color-positive); color: var(--color-positive); }
+
+/* Meal form: two-stage layout */
+.meal-form-text-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.meal-form-slot.inline {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.meal-form-slot.inline select {
+  border: 1px solid rgba(26,23,22,0.08);
+  border-radius: 12px;
+  background: var(--cream);
+  padding: 10px 8px;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+}
+.meal-form-text {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid rgba(26,23,22,0.08);
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: 14px;
+  background: var(--cream);
+  outline: none;
+  color: var(--ink);
+}
+.meal-form-text:focus { border-color: var(--color-accent); }
+
+.meal-form-manual-link {
+  background: transparent;
+  border: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(26,23,22,0.55);
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  padding: 8px;
+}
+.meal-form-manual-link:hover { color: var(--color-accent); }
+
+.meal-form-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.meal-form-back {
+  background: transparent;
+  border: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(26,23,22,0.55);
+  cursor: pointer;
+}
+.meal-form-text-readback {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  color: rgba(26,23,22,0.6);
+  background: var(--cream);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.meal-form-template {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: rgba(26,23,22,0.65);
+  flex-wrap: wrap;
+}
+.meal-form-template input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+}
+.meal-form-template-name {
+  flex: 1;
+  min-width: 140px;
+  padding: 6px 10px;
+  border: 1px solid rgba(26,23,22,0.08);
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 13px;
+  background: var(--cream);
+  outline: none;
+}
+
+.meal-form-quota {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--color-danger);
+  background: rgba(229,72,77,0.08);
+  border: 1px solid rgba(229,72,77,0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+  letter-spacing: 0.2px;
+}
+
+@media (max-width: 520px) {
+  .meal-form-text-row { flex-direction: column; }
+  .meal-form-slot.inline { flex-direction: column; align-items: stretch; }
+}
