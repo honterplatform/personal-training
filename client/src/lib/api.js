@@ -101,5 +101,6 @@ export const api = {
   getCoachThread: () => request("/api/coach"),
   sendCoachMessage: (message, date) => request("/api/coach", { method: "POST", body: JSON.stringify({ message, date }) }),
   coachOpener: (date) => request("/api/coach/opener", { method: "POST", body: JSON.stringify({ date }) }),
+  coachReview: (date) => request("/api/coach/review", { method: "POST", body: JSON.stringify({ date }) }),
   resetCoach: () => request("/api/coach", { method: "DELETE" }),
 };

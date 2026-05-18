@@ -3,7 +3,7 @@ import Conversation from "../models/Conversation.js";
 import Tracker from "../models/Tracker.js";
 import Entry from "../models/Entry.js";
 import User from "../models/User.js";
-import { coachChat, coachOpener } from "../anthropic.js";
+import { coachChat, coachOpener, coachReview } from "../anthropic.js";
 import { weekRange, weekStartISO, todayISO } from "../dates.js";
 import { consumeQuota, sendQuotaErrorIfAny } from "../lib/aiQuota.js";
 import { computeInsights } from "../lib/insights.js";
@@ -71,6 +71,17 @@ router.post("/opener", async (req, res) => {
   c.messages.push({ role: "assistant", content: reply, createdAt: new Date() });
   await c.save();
   res.json({ messages: c.messages });
+});
+
+// One-off weekly review — does not persist to the conversation thread.
+router.post("/review", async (req, res) => {
+  try { await consumeQuota(req.userId, "coach"); }
+  catch (err) { if (sendQuotaErrorIfAny(err, res)) return; throw err; }
+
+  const { date } = req.body || {};
+  const ctx = await buildContext(req.userId, date);
+  const summary = await coachReview({ contextArgs: ctx });
+  res.json({ summary });
 });
 
 router.delete("/", async (req, res) => {

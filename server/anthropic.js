@@ -310,6 +310,31 @@ export async function coachChat({ history, userMessage, contextArgs }) {
   }
 }
 
+export async function coachReview({ contextArgs }) {
+  const client = getClient();
+  if (!client) return "Coach is offline (no API key) — review is unavailable.";
+
+  const context = buildContextBlock(contextArgs);
+  try {
+    const resp = await client.messages.create({
+      model: COACH_MODEL,
+      max_tokens: 400,
+      temperature: 0.4,
+      system: COACH_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: `${context}\n\nWrite a weekly review for the athlete in 4-5 sentences. Cover: training volume vs planned, macro/calorie adherence trend, weight/waist trend if visible, and one specific thing to focus on next week. Stay grounded in the numbers above — do not invent.`,
+        },
+      ],
+    });
+    return resp.content.filter((c) => c.type === "text").map((c) => c.text).join("").trim();
+  } catch (err) {
+    console.error("[anthropic] review failed:", err.message);
+    return "Could not generate review right now — try again in a moment.";
+  }
+}
+
 export async function coachOpener({ contextArgs }) {
   const client = getClient();
   if (!client) return "Welcome back. Log a session and I'll have something to coach against.";

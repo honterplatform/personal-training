@@ -267,6 +267,31 @@ input, textarea { font: inherit; }
   color: rgba(26,23,22,0.6);
   cursor: pointer;
 }
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-btn {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.06);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(26,23,22,0.7);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.header-btn:hover {
+  color: var(--color-accent);
+  border-color: rgba(255,90,60,0.2);
+}
 
 /* Hero */
 .hero-card {
@@ -2870,4 +2895,249 @@ input, textarea { font: inherit; }
   font-family: var(--mono);
   font-size: 11.5px;
   color: rgba(26,23,22,0.55);
+}
+
+/* ---------- WeeklyReview ---------- */
+.weekly-review {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--cream);
+  overflow-y: auto;
+}
+.weekly-review-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 22px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.weekly-review-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.weekly-review-eyebrow {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(26,23,22,0.45);
+}
+.weekly-review-range {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 28px;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  margin-top: 4px;
+  color: var(--ink);
+}
+.weekly-review-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(26,23,22,0.6);
+}
+.review-summary {
+  background: var(--ink-dark);
+  color: var(--cream);
+  border-radius: 18px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.review-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(245,243,238,0.6);
+}
+.review-summary-body {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(245,243,238,0.95);
+  white-space: pre-wrap;
+}
+.review-summary-loading,
+.review-summary-error {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(245,243,238,0.55);
+}
+.review-block {
+  background: var(--card);
+  border: 1px solid rgba(26,23,22,0.06);
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.review-block-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(26,23,22,0.5);
+}
+.review-block-stat {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.review-stat-big {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: -0.8px;
+  color: var(--ink);
+}
+.review-stat-mid {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  color: rgba(26,23,22,0.45);
+}
+.review-stat-unit {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: rgba(26,23,22,0.5);
+  margin-left: 6px;
+}
+.review-stat-delta {
+  margin-left: 10px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(26,23,22,0.05);
+}
+.review-stat-delta.down { color: var(--color-positive); background: rgba(62,207,142,0.1); }
+.review-stat-delta.up   { color: var(--color-danger);   background: rgba(229,72,77,0.1); }
+.review-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+.review-day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: rgba(26,23,22,0.03);
+}
+.review-day-cell.training {
+  background: rgba(255,90,60,0.05);
+}
+.review-day-name {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(26,23,22,0.5);
+}
+.review-day-dot {
+  font-size: 16px;
+  line-height: 1;
+  margin-top: 4px;
+  color: rgba(26,23,22,0.3);
+}
+.review-day-cell.training.logged .review-day-dot { color: var(--color-positive); }
+.review-day-cell.training:not(.logged) .review-day-dot { color: var(--color-accent); }
+.review-macros-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(26,23,22,0.6);
+}
+.review-macros-row strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.review-macro-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+.review-macro-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.review-macro-track {
+  width: 100%;
+  height: 60px;
+  background: rgba(26,23,22,0.05);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.review-macro-fill {
+  width: 100%;
+  border-radius: 6px;
+  transition: height 200ms;
+}
+.review-macro-fill.good { background: var(--color-positive); }
+.review-macro-fill.mid  { background: rgba(26,23,22,0.35); }
+.review-macro-fill.low  { background: rgba(229,72,77,0.5); }
+.review-macro-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: rgba(26,23,22,0.5);
+}
+.review-sparkline {
+  width: 100%;
+  height: 44px;
+  color: var(--color-accent);
+}
+.review-photo-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.review-photo-pair figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.review-photo-pair img {
+  width: 100%;
+  border-radius: 12px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+.review-photo-pair figcaption {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.3px;
+  color: rgba(26,23,22,0.55);
+  text-align: center;
 }

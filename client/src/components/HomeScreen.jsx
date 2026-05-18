@@ -11,11 +11,13 @@ import InsightsStrip from "./InsightsStrip.jsx";
 import TrackerCard from "./TrackerCard.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import CoachChat from "./CoachChat.jsx";
+import WeeklyReview from "./WeeklyReview.jsx";
 
 export default function HomeScreen() {
   const { trackers, weekEntries, selectedDate, setSelectedDate } = useStore();
   const [showSettings, setShowSettings] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
+  const [showReview, setShowReview] = useState(false);
 
   const dayEntries = weekEntries.filter((e) => e.date === selectedDate);
   const dayKcal = dayEntries.reduce((s, e) => s + (e.caloriesBurned ?? 0), 0);
@@ -23,7 +25,10 @@ export default function HomeScreen() {
   return (
     <div className="app-shell">
       <div className="shell-inner">
-        <Header onOpenSettings={() => setShowSettings(true)} />
+        <Header
+          onOpenSettings={() => setShowSettings(true)}
+          onOpenReview={() => setShowReview(true)}
+        />
 
         <WeeklyHero
           trackers={trackers}
@@ -66,6 +71,7 @@ export default function HomeScreen() {
 
       {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
       {showCoach && <CoachChat onClose={() => setShowCoach(false)} />}
+      {showReview && <WeeklyReview onClose={() => setShowReview(false)} />}
     </div>
   );
 }
