@@ -107,6 +107,74 @@ Return ONLY a strict JSON object: {"calories": <integer>}`;
   }
 }
 
+// ---------- Meal estimate (Haiku) ----------
+
+const MEAL_SYSTEM = `You estimate calories and macros for a single meal from a natural-language description. The user lives in Colombia and may mention local foods (arepa, plantain, patacón, yuca, sobrebarriga, bocadillo, pandebono, empanada, tinto, panela) — recognize them and use Colombian portion conventions.
+
+Rules:
+- Output ONLY a JSON object. No prose, no markdown, no explanation.
+- Use gram-based reasoning. If grams are stated, trust them. If not, infer a reasonable portion for the given meal slot and a typical adult athlete.
+- Round calories to the nearest 10. Round each macro to the nearest 1g.
+- Set "confidence":
+  - "high" when grams are explicit or every food is common and clearly portioned
+  - "med"  when portions are qualitative ("a big lunch", "1 plate", "a handful")
+  - "low"  when the input is vague, contradictory, or contains items you cannot identify
+- If the description is empty or nonsensical, return zeros with confidence "low".
+- Never guess wildly: if unsure, lean conservative on calories but stay realistic.
+
+Output shape (strict):
+{"calories": <int>, "proteinG": <int>, "carbsG": <int>, "fatG": <int>, "confidence": "high"|"med"|"low"}`;
+
+/**
+ * Returns { calories, proteinG, carbsG, fatG, confidence, source }
+ * where source ∈ "ai" | "fallback". Does NOT consume quota or hit the
+ * cache — the route is responsible for that.
+ */
+export async function estimateMeal({ text, mealSlot }) {
+  const client = getClient();
+  if (!client) return { ...(await fallback({ text, mealSlot })), source: "fallback" };
+
+  const prompt = `Meal slot: ${mealSlot}
+Description: ${text}
+
+Respond with the JSON only.`;
+
+  try {
+    const resp = await client.messages.create({
+      model: ESTIMATION_MODEL,
+      max_tokens: 200,
+      temperature: 0,
+      system: MEAL_SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const out = resp.content.filter((c) => c.type === "text").map((c) => c.text).join("");
+    const match = out.match(/\{[\s\S]*?\}/);
+    if (!match) throw new Error("no json in response");
+    const parsed = JSON.parse(match[0]);
+    const cleaned = {
+      calories: clampInt(parsed.calories),
+      proteinG: clampInt(parsed.proteinG),
+      carbsG:   clampInt(parsed.carbsG),
+      fatG:     clampInt(parsed.fatG),
+      confidence: ["high","med","low"].includes(parsed.confidence) ? parsed.confidence : "low",
+    };
+    return { ...cleaned, source: "ai" };
+  } catch (err) {
+    console.error("[anthropic] meal estimate failed:", err.message);
+    return { ...(await fallback({ text, mealSlot })), source: "fallback" };
+  }
+}
+
+async function fallback({ text, mealSlot }) {
+  const { estimateFromText } = await import("./lib/ingredients.js");
+  return estimateFromText({ text, mealSlot });
+}
+
+function clampInt(n) {
+  const v = Math.round(Number(n));
+  return Number.isFinite(v) && v >= 0 ? v : 0;
+}
+
 // ---------- Coach context ----------
 
 function buildContextBlock({ user, trackers, weekEntries, weekStart, selectedDate, dayEntries }) {
