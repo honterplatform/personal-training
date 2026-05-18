@@ -1,7 +1,7 @@
 import { weekDays as weekDaysOf, todayISO, weekRange } from "../lib/dates.js";
 import { SparkIcon } from "./Icons.jsx";
 
-const ACCENT = "#ff5a3c";
+const POSITIVE = "#3ecf8e";
 const DAY_INITIALS = ["m", "t", "w", "t", "f", "s", "s"];
 
 export default function WeeklyHero({
@@ -100,7 +100,7 @@ function GoalTile({ tracker, tot }) {
         <div className="hero-tile-bar">
           <div
             className="hero-tile-bar-fill"
-            style={{ width: `${pct * 100}%`, background: hit ? ACCENT : "rgba(244,239,229,0.4)" }}
+            style={{ width: `${pct * 100}%`, background: hit ? POSITIVE : "rgba(244,239,229,0.4)" }}
           />
         </div>
       ) : null}

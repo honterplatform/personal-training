@@ -5,7 +5,17 @@
   --cream: #f4efe5;
   --cream-tint: #ebe5d6;
   --card: #ffffff;
-  --accent: #ff5a3c;
+
+  /* Brand + active states only. Not "good", not "bad" — just LOG. */
+  --color-accent: #ff5a3c;
+  /* Target hit, progress complete, "saved", weight trending the right way. */
+  --color-positive: #3ecf8e;
+  /* Errors, destructive actions, danger zones. */
+  --color-danger: #e5484d;
+
+  /* alias for legacy refs in JS — gradually move to --color-accent. */
+  --accent: var(--color-accent);
+
   --serif: "Instrument Serif", Georgia, serif;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -146,7 +156,7 @@ input, textarea { font: inherit; }
 .auth-input:focus { border-color: rgba(244,239,229,0.3); }
 
 .auth-error {
-  color: var(--accent);
+  color: var(--color-danger);
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.3px;
@@ -330,7 +340,7 @@ input, textarea { font: inherit; }
   color: var(--cream);
   margin-top: 2px;
 }
-.hero-tile.hit .hero-tile-value { color: var(--accent); }
+.hero-tile.hit .hero-tile-value { color: var(--color-positive); }
 .hero-tile-goal {
   font-weight: 500;
   color: rgba(244,239,229,0.35);
@@ -617,7 +627,7 @@ input, textarea { font: inherit; }
   font-size: 12px;
   cursor: pointer;
 }
-.entry-row-del:hover { background: rgba(255,90,60,0.1); color: var(--accent); }
+.entry-row-del:hover { background: rgba(229,72,77,0.1); color: var(--color-danger); }
 
 .tracker-card-add {
   align-self: flex-start;
@@ -883,7 +893,7 @@ input, textarea { font: inherit; }
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 1px;
-  color: var(--accent);
+  color: var(--color-positive);
   text-transform: uppercase;
 }
 .settings-tri-row {
@@ -960,7 +970,7 @@ input, textarea { font: inherit; }
   color: rgba(26,23,22,0.35);
   font-size: 12px;
 }
-.settings-delete:hover { background: rgba(255,90,60,0.1); color: var(--accent); }
+.settings-delete:hover { background: rgba(229,72,77,0.1); color: var(--color-danger); }
 .settings-tracker-meta {
   display: flex;
   gap: 10px;
@@ -1072,8 +1082,8 @@ input, textarea { font: inherit; }
 .settings-danger {
   margin-top: 10px;
   background: transparent;
-  border: 1px solid rgba(255,90,60,0.3);
-  color: var(--accent);
+  border: 1px solid rgba(229,72,77,0.35);
+  color: var(--color-danger);
   border-radius: 12px;
   padding: 12px;
   font-family: var(--mono);
@@ -1082,7 +1092,7 @@ input, textarea { font: inherit; }
   cursor: pointer;
 }
 .settings-danger:hover {
-  background: var(--accent);
+  background: var(--color-danger);
   color: #fff;
 }
 .settings-danger:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -1361,7 +1371,7 @@ input, textarea { font: inherit; }
 .onboarding-error {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--accent);
+  color: var(--color-danger);
   letter-spacing: 0.3px;
   margin: 4px 0 12px;
 }
@@ -1661,7 +1671,7 @@ input, textarea { font: inherit; }
   font-size: 12px;
   cursor: pointer;
 }
-.ob-pick-remove:hover { background: var(--accent); color: #fff; }
+.ob-pick-remove:hover { background: var(--color-danger); color: #fff; }
 
 @media (max-width: 520px) {
   .onboarding-title { font-size: 32px; }
