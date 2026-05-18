@@ -16,6 +16,7 @@ import nutritionRoutes from "./routes/nutrition.js";
 import templateRoutes from "./routes/templates.js";
 import measurementRoutes from "./routes/measurements.js";
 import photoRoutes from "./routes/photos.js";
+import insightsRoutes from "./routes/insights.js";
 import adminRoutes from "./routes/admin.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +41,7 @@ app.use("/api/measurements", requireAuth, measurementRoutes);
 // /api/photos applies requireAuth per-route — the file streaming endpoint
 // is JWT-gated instead so <img src> can load without a session cookie.
 app.use("/api/photos", photoRoutes);
+app.use("/api/insights", requireAuth, insightsRoutes);
 app.use("/api/coach", requireAuth, coachRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);
 

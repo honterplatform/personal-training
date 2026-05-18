@@ -1,5 +1,6 @@
 import express from "express";
 import Weight from "../models/Weight.js";
+import { insightsInvalidate } from "../lib/insightsCache.js";
 
 const router = express.Router();
 
@@ -31,11 +32,13 @@ router.post("/", async (req, res) => {
     { $set: { weightKg } },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
+  insightsInvalidate(req.userId);
   res.json(doc);
 });
 
 router.delete("/:id", async (req, res) => {
   await Weight.deleteOne({ _id: req.params.id, userId: req.userId });
+  insightsInvalidate(req.userId);
   res.json({ ok: true });
 });
 

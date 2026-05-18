@@ -3,6 +3,7 @@ import NutritionEntry, { MEAL_SLOTS } from "../models/NutritionEntry.js";
 import { estimateMeal } from "../anthropic.js";
 import { cacheGet, cacheSet } from "../lib/aiCache.js";
 import { consumeQuota, sendQuotaErrorIfAny } from "../lib/aiQuota.js";
+import { insightsInvalidate } from "../lib/insightsCache.js";
 
 const router = express.Router();
 
@@ -40,6 +41,7 @@ router.post("/", async (req, res) => {
     confidence,
     sourceText: (body.sourceText || "").toString().slice(0, 1000),
   });
+  insightsInvalidate(req.userId);
   res.status(201).json(entry);
 });
 
@@ -112,11 +114,13 @@ router.put("/:id", async (req, res) => {
   }
 
   await entry.save();
+  insightsInvalidate(req.userId);
   res.json(entry);
 });
 
 router.delete("/:id", async (req, res) => {
   await NutritionEntry.deleteOne({ _id: req.params.id, userId: req.userId });
+  insightsInvalidate(req.userId);
   res.json({ ok: true });
 });
 

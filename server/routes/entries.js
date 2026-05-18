@@ -4,6 +4,7 @@ import Tracker from "../models/Tracker.js";
 import User from "../models/User.js";
 import { estimateCalories } from "../anthropic.js";
 import { consumeQuota, sendQuotaErrorIfAny } from "../lib/aiQuota.js";
+import { insightsInvalidate } from "../lib/insightsCache.js";
 
 const router = express.Router();
 
@@ -64,6 +65,7 @@ router.post("/", async (req, res) => {
     // UI shows an "AI estimate paused" chip.
   }
 
+  insightsInvalidate(req.userId);
   res.status(201).json(entry);
 });
 
@@ -120,11 +122,13 @@ router.put("/:id", async (req, res) => {
   }
 
   await entry.save();
+  insightsInvalidate(req.userId);
   res.json(entry);
 });
 
 router.delete("/:id", async (req, res) => {
   await Entry.deleteOne({ _id: req.params.id, userId: req.userId });
+  insightsInvalidate(req.userId);
   res.json({ ok: true });
 });
 
