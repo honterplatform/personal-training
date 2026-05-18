@@ -4,7 +4,10 @@ import Header from "./Header.jsx";
 import WeeklyHero from "./WeeklyHero.jsx";
 import DateSelector from "./DateSelector.jsx";
 import WeightCard from "./WeightCard.jsx";
+import MeasurementCard from "./MeasurementCard.jsx";
 import NutritionCard from "./NutritionCard.jsx";
+import PhotoCard from "./PhotoCard.jsx";
+import InsightsStrip from "./InsightsStrip.jsx";
 import TrackerCard from "./TrackerCard.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import CoachChat from "./CoachChat.jsx";
@@ -36,8 +39,12 @@ export default function HomeScreen() {
           dayKcal={dayKcal}
         />
 
+        <InsightsStrip />
+
         <WeightCard />
+        <MeasurementCard />
         <NutritionCard />
+        <PhotoCard />
 
         {trackers.length === 0 ? (
           <div className="empty-trackers">
