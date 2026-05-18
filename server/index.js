@@ -13,6 +13,7 @@ import entryRoutes from "./routes/entries.js";
 import coachRoutes from "./routes/coach.js";
 import weightRoutes from "./routes/weights.js";
 import nutritionRoutes from "./routes/nutrition.js";
+import templateRoutes from "./routes/templates.js";
 import adminRoutes from "./routes/admin.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +33,7 @@ app.use("/api/trackers", requireAuth, trackerRoutes);
 app.use("/api/entries", requireAuth, entryRoutes);
 app.use("/api/weights", requireAuth, weightRoutes);
 app.use("/api/nutrition", requireAuth, nutritionRoutes);
+app.use("/api/templates", requireAuth, templateRoutes);
 app.use("/api/coach", requireAuth, coachRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);
 
