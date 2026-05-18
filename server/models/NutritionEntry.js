@@ -19,8 +19,9 @@ const NutritionEntrySchema = new mongoose.Schema(
     carbsG:   { type: Number, default: 0 },
     fatG:     { type: Number, default: 0 },
     notes:    { type: String, default: "" },
-    // Phase 2 will add "ai" to this enum once meal parsing ships
-    source:   { type: String, enum: ["manual"], default: "manual" },
+    source:     { type: String, enum: ["manual", "ai", "fallback"], default: "manual" },
+    confidence: { type: String, enum: ["high", "med", "low", null], default: null },
+    sourceText: { type: String, default: "" },  // raw text input when source != manual
   },
   { timestamps: true }
 );

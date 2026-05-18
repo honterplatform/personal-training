@@ -60,6 +60,16 @@ const TargetsSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Daily AI call counters. Reset when `date` rolls over (user TZ).
+const AiCallsSchema = new mongoose.Schema(
+  {
+    date:     { type: String, default: null },  // YYYY-MM-DD in user TZ
+    estimate: { type: Number, default: 0 },
+    coach:    { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
 const UserSchema = new mongoose.Schema(
   {
     email:        { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
@@ -68,6 +78,7 @@ const UserSchema = new mongoose.Schema(
     demographics: { type: DemographicsSchema,    default: () => ({}) },
     weeklySchedule: { type: WeeklyScheduleSchema, default: () => ({}) },
     targets:        { type: TargetsSchema,        default: () => ({}) },
+    aiCalls:        { type: AiCallsSchema,        default: () => ({}) },
     onboardedAt:    { type: Date,   default: null },
     timezone:       { type: String, default: "America/Bogota" },
   },
