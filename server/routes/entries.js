@@ -3,6 +3,7 @@ import Entry from "../models/Entry.js";
 import Tracker from "../models/Tracker.js";
 import User from "../models/User.js";
 import { estimateCalories } from "../anthropic.js";
+import { consumeQuota, sendQuotaErrorIfAny } from "../lib/aiQuota.js";
 
 const router = express.Router();
 
@@ -36,20 +37,31 @@ router.post("/", async (req, res) => {
   });
 
   if (tracker.kind === "workout" && entry.durationMin && entry.durationMin > 0) {
-    const user = await User.findById(req.userId).lean();
-    const result = await estimateCalories({
-      activityName: tracker.name,
-      durationMin: entry.durationMin,
-      rpe: entry.rpe,
-      bodyWeightKg: user?.demographics?.weightKg,
-      heightCm: user?.demographics?.heightCm,
-      sex: user?.demographics?.sex,
-      age: user?.demographics?.age,
-      fitnessLevel: user?.demographics?.fitnessLevel,
-    });
-    entry.caloriesBurned = result.calories;
-    entry.caloriesBurnedSource = result.source;
-    await entry.save();
+    let quotaOk = true;
+    try { await consumeQuota(req.userId, "estimate"); }
+    catch (err) {
+      if (err?.http === 429) { quotaOk = false; }
+      else throw err;
+    }
+
+    if (quotaOk) {
+      const user = await User.findById(req.userId).lean();
+      const result = await estimateCalories({
+        activityName: tracker.name,
+        durationMin: entry.durationMin,
+        rpe: entry.rpe,
+        bodyWeightKg: user?.demographics?.weightKg,
+        heightCm: user?.demographics?.heightCm,
+        sex: user?.demographics?.sex,
+        age: user?.demographics?.age,
+        fitnessLevel: user?.demographics?.fitnessLevel,
+      });
+      entry.caloriesBurned = result.calories;
+      entry.caloriesBurnedSource = result.source;
+      await entry.save();
+    }
+    // If quota was exhausted, entry is saved with caloriesBurned: null;
+    // UI shows an "AI estimate paused" chip.
   }
 
   res.status(201).json(entry);
@@ -81,19 +93,30 @@ router.put("/:id", async (req, res) => {
     needsRecalc = false;
   } else if (needsRecalc && tracker.kind === "workout" && entry.durationMin && entry.durationMin > 0
              && entry.caloriesBurnedSource !== "manual") {
-    const user = await User.findById(req.userId).lean();
-    const result = await estimateCalories({
-      activityName: tracker.name,
-      durationMin: entry.durationMin,
-      rpe: entry.rpe,
-      bodyWeightKg: user?.demographics?.weightKg,
-      heightCm: user?.demographics?.heightCm,
-      sex: user?.demographics?.sex,
-      age: user?.demographics?.age,
-      fitnessLevel: user?.demographics?.fitnessLevel,
-    });
-    entry.caloriesBurned = result.calories;
-    entry.caloriesBurnedSource = result.source;
+    let quotaOk = true;
+    try { await consumeQuota(req.userId, "estimate"); }
+    catch (err) {
+      if (err?.http === 429) { quotaOk = false; }
+      else throw err;
+    }
+    if (quotaOk) {
+      const user = await User.findById(req.userId).lean();
+      const result = await estimateCalories({
+        activityName: tracker.name,
+        durationMin: entry.durationMin,
+        rpe: entry.rpe,
+        bodyWeightKg: user?.demographics?.weightKg,
+        heightCm: user?.demographics?.heightCm,
+        sex: user?.demographics?.sex,
+        age: user?.demographics?.age,
+        fitnessLevel: user?.demographics?.fitnessLevel,
+      });
+      entry.caloriesBurned = result.calories;
+      entry.caloriesBurnedSource = result.source;
+    } else {
+      entry.caloriesBurned = null;
+      entry.caloriesBurnedSource = null;
+    }
   }
 
   await entry.save();

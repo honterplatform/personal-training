@@ -5,6 +5,7 @@ import Entry from "../models/Entry.js";
 import User from "../models/User.js";
 import { coachChat, coachOpener } from "../anthropic.js";
 import { weekRange, weekStartISO, todayISO } from "../dates.js";
+import { consumeQuota, sendQuotaErrorIfAny } from "../lib/aiQuota.js";
 
 const router = express.Router();
 const HISTORY_TURNS = 16;
@@ -41,6 +42,9 @@ router.post("/", async (req, res) => {
   if (!message || typeof message !== "string" || !message.trim())
     return res.status(400).json({ error: "message required" });
 
+  try { await consumeQuota(req.userId, "coach"); }
+  catch (err) { if (sendQuotaErrorIfAny(err, res)) return; throw err; }
+
   const c = await loadConversation(req.userId);
   const ctx = await buildContext(req.userId, date);
   const reply = await coachChat({
@@ -55,6 +59,9 @@ router.post("/", async (req, res) => {
 });
 
 router.post("/opener", async (req, res) => {
+  try { await consumeQuota(req.userId, "coach"); }
+  catch (err) { if (sendQuotaErrorIfAny(err, res)) return; throw err; }
+
   const { date } = req.body || {};
   const c = await loadConversation(req.userId);
   const ctx = await buildContext(req.userId, date);
