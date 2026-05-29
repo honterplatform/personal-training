@@ -65,7 +65,8 @@ const PORT = process.env.PORT || 4000;
 (async () => {
   try {
     await connectDB();
-    await runBootMigrations();
+    // Boot migration temporarily disabled while debugging a Railway 502.
+    // await runBootMigrations();
     app.listen(PORT, () => console.log(`[server] listening on ${PORT}`));
   } catch (err) {
     console.error("[server] startup failed:", err);
