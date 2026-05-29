@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./db.js";
 import { requireAuth } from "./auth.js";
+import { runBootMigrations } from "./lib/bootMigrate.js";
 import authRoutes from "./routes/auth.js";
 import trackerRoutes from "./routes/trackers.js";
 import entryRoutes from "./routes/entries.js";
@@ -64,6 +65,7 @@ const PORT = process.env.PORT || 4000;
 (async () => {
   try {
     await connectDB();
+    await runBootMigrations();
     app.listen(PORT, () => console.log(`[server] listening on ${PORT}`));
   } catch (err) {
     console.error("[server] startup failed:", err);
